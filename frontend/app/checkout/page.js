@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { MapPin, User, Phone, ArrowRight, ShoppingBag } from 'lucide-react';
@@ -12,8 +12,13 @@ export default function CheckoutPage() {
   const [form, setForm] = useState({ name: '', phone: '', address: '', zone: '' });
   const [errors, setErrors] = useState({});
 
+  useEffect(() => {
+    if (cartItems.length === 0) {
+      router.replace('/productos');
+    }
+  }, [cartItems.length, router]);
+
   if (cartItems.length === 0) {
-    router.replace('/productos');
     return null;
   }
 
