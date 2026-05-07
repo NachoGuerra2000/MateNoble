@@ -1,21 +1,14 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
 const connectDB = require('./config/db');
 
 const app = express();
 
 connectDB();
 
-const uploadsDir = path.join(__dirname, 'public/uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
 app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:3000' }));
 app.use(express.json());
-
-app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
