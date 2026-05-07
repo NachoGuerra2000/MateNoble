@@ -44,7 +44,7 @@ export default function Footer() {
                   @matenoble.tuc
                 </a>
               </li>
-              <li>Envíos a todo el país</li>
+              <li>Envíos a Yerba Buena y San Miguel</li>
             </ul>
           </div>
         </div>

@@ -97,7 +97,7 @@ export default async function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
           {[
             { icon: '🤝', title: 'Hecho a mano', desc: 'Cada pieza es única, trabajada por artesanos con años de experiencia.' },
-            { icon: '🚚', title: 'Envíos a todo el país', desc: 'Despachamos a cualquier punto de Argentina con embalaje seguro.' },
+            { icon: '🚚', title: 'Envíos a Yerba Buena y San Miguel', desc: 'Realizamos envíos dentro de Yerba Buena y San Miguel con embalaje seguro.' },
             { icon: '⭐', title: 'Calidad garantizada', desc: 'Materiales seleccionados y curado premium para una larga vida útil.' },
           ].map((f) => (
             <div key={f.title} className="p-6 rounded-2xl bg-white shadow-sm border border-mate-100">

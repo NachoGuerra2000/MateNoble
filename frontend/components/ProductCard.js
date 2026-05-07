@@ -29,7 +29,7 @@ export default function ProductCard({ product }) {
     <Link href={`/productos/${product._id}`} className="group block">
       <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden flex flex-col h-full">
         {/* Image */}
-        <div className="relative h-56 bg-mate-50 overflow-hidden">
+        <div className="relative h-36 sm:h-56 bg-mate-50 overflow-hidden">
           <Image
             src={product.image}
             alt={product.name}
@@ -50,31 +50,31 @@ export default function ProductCard({ product }) {
         </div>
 
         {/* Content */}
-        <div className="p-4 flex flex-col flex-1">
-          <h3 className="font-semibold text-mate-900 text-base leading-snug line-clamp-2">
+        <div className="p-2 sm:p-4 flex flex-col flex-1">
+          <h3 className="font-semibold text-mate-900 text-xs sm:text-base leading-snug line-clamp-2">
             {product.name}
           </h3>
-          <p className="text-mate-500 text-sm mt-1.5 line-clamp-2 flex-1">{product.description}</p>
+          <p className="hidden sm:block text-mate-500 text-sm mt-1.5 line-clamp-2 flex-1">{product.description}</p>
 
-          <div className="mt-3">
+          <div className="mt-2 sm:mt-3">
             {!outOfStock ? (
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-mate-800 font-bold text-xl">
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="text-mate-800 font-bold text-sm sm:text-xl">
                   ${product.price.toLocaleString('es-AR')}
                 </span>
-                <span className="text-mate-400 line-through text-sm">
+                <span className="hidden sm:inline text-mate-400 line-through text-sm">
                   ${originalPrice.toLocaleString('es-AR')}
                 </span>
-                <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">
-                  -15% OFF
+                <span className="bg-green-100 text-green-700 text-xs font-bold px-1.5 py-0.5 rounded-full">
+                  -15%
                 </span>
               </div>
             ) : (
-              <span className="text-mate-400 font-bold text-xl">
+              <span className="text-mate-400 font-bold text-sm sm:text-xl">
                 ${product.price.toLocaleString('es-AR')}
               </span>
             )}
-            <div className="flex items-center gap-1 text-xs text-mate-500 mt-1">
+            <div className="hidden sm:flex items-center gap-1 text-xs text-mate-500 mt-1">
               <Package className="w-3.5 h-3.5" />
               <span>{product.stock} disponibles</span>
             </div>
@@ -83,14 +83,15 @@ export default function ProductCard({ product }) {
           <button
             onClick={handleAddToCart}
             disabled={outOfStock}
-            className={`mt-3 w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all duration-200 ${
+            className={`mt-2 sm:mt-3 w-full flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-2.5 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${
               outOfStock
                 ? 'bg-mate-100 text-mate-400 cursor-not-allowed'
                 : 'bg-mate-700 text-white hover:bg-mate-600 active:scale-95'
             }`}
           >
-            <ShoppingCart className="w-4 h-4" />
-            {outOfStock ? 'Sin stock' : 'Agregar al carrito'}
+            <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="sm:hidden">{outOfStock ? 'Sin stock' : 'Agregar'}</span>
+            <span className="hidden sm:inline">{outOfStock ? 'Sin stock' : 'Agregar al carrito'}</span>
           </button>
         </div>
       </div>
