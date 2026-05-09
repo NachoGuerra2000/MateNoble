@@ -1,20 +1,13 @@
 const express = require('express');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const Order = require('../models/Order');
 const auth = require('../middleware/authMiddleware');
 
 const router = express.Router();
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const SHIPPING_COST = 4000;
 const ZONE_LABELS = { yerba_buena: 'Yerba Buena', san_miguel: 'San Miguel de Tucumán' };
-
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
 
 const sendAdminEmail = async (order) => {
   const itemsHtml = order.items
@@ -28,8 +21,8 @@ const sendAdminEmail = async (order) => {
     )
     .join('');
 
-  await transporter.sendMail({
-    from: `"Mate Noble" <${process.env.EMAIL_USER}>`,
+  await resend.emails.send({
+    from: 'Mate Noble <onboarding@resend.dev>',
     to: process.env.ADMIN_EMAIL,
     subject: `🛒 Nueva compra - ${order.customer.name}`,
     html: `
@@ -76,6 +69,7 @@ const sendAdminEmail = async (order) => {
     `,
   });
 };
+
 
 const sendWhatsApp = async (order) => {
   const phone = process.env.WHATSAPP_PHONE;
