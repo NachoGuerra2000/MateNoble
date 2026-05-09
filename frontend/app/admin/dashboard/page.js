@@ -12,13 +12,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 const CATEGORIES = [
   { value: 'calabaza', label: 'Calabaza' },
   { value: 'algarrobo', label: 'Algarrobo' },
-  { value: 'madera', label: 'Madera' },
   { value: 'acero', label: 'Acero' },
   { value: 'otros', label: 'Otros' },
 ];
 
 const EMPTY_FORM = {
-  name: '', price: '', image: '', description: '',
+  name: '', price: '', image: '', images: [], description: '',
   category: 'calabaza', stock: '', featured: false, active: true,
 };
 
@@ -35,6 +34,7 @@ export default function AdminDashboard() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
+  const multiFileInputRef = useRef(null);
 
   useEffect(() => {
     if (!isAuthenticated) router.replace('/admin/login');
@@ -69,14 +69,51 @@ export default function AdminDashboard() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
-      setForm((prev) => ({ ...prev, image: data.url }));
+      setForm((prev) => ({
+        ...prev,
+        image: data.url,
+        images: prev.images.length === 0 ? [data.url] : [data.url, ...prev.images.slice(1)],
+      }));
       setImagePreview(data.url);
-      toast.success('Imagen subida');
+      toast.success('Imagen principal subida');
     } catch (err) {
       toast.error(err.message || 'Error al subir imagen');
     } finally {
       setUploadingImage(false);
     }
+  };
+
+  const handleExtraImagesUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      files.forEach((f) => formData.append('images', f));
+      const res = await fetch(`${API_URL}/upload/multiple`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setForm((prev) => ({ ...prev, images: [...prev.images, ...data.urls] }));
+      toast.success(`${data.urls.length} imagen(es) agregada(s)`);
+    } catch (err) {
+      toast.error(err.message || 'Error al subir imágenes');
+    } finally {
+      setUploadingImage(false);
+      e.target.value = '';
+    }
+  };
+
+  const removeExtraImage = (url) => {
+    setForm((prev) => {
+      const newImages = prev.images.filter((u) => u !== url);
+      const newImage = newImages[0] || '';
+      return { ...prev, images: newImages, image: newImage };
+    });
+    if (imagePreview === url) setImagePreview(form.images.find((u) => u !== url) || null);
   };
 
   const openCreate = () => {
@@ -88,11 +125,13 @@ export default function AdminDashboard() {
 
   const openEdit = (product) => {
     setEditingProduct(product);
-    setImagePreview(product.image);
+    const images = product.images?.length ? product.images : (product.image ? [product.image] : []);
+    setImagePreview(images[0] || product.image);
     setForm({
       name: product.name,
       price: product.price,
       image: product.image,
+      images,
       description: product.description,
       category: product.category,
       stock: product.stock,
@@ -109,7 +148,8 @@ export default function AdminDashboard() {
       return;
     }
     setSaving(true);
-    const payload = { ...form, price: Number(form.price), stock: Number(form.stock) };
+    const images = form.images.length ? form.images : (form.image ? [form.image] : []);
+    const payload = { ...form, price: Number(form.price), stock: Number(form.stock), images, image: images[0] || form.image };
     try {
       if (editingProduct) {
         await productsAPI.update(editingProduct._id, payload, token);
@@ -224,7 +264,7 @@ export default function AdminDashboard() {
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
                           <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-mate-100 flex-shrink-0">
-                            <Image src={p.image} alt={p.name} fill className="object-cover" sizes="40px" />
+                            <Image src={p.images?.[0] || p.image} alt={p.name} fill className="object-cover" sizes="40px" />
                           </div>
                           <span className="font-medium text-mate-800 line-clamp-1">{p.name}</span>
                         </div>
@@ -331,51 +371,55 @@ export default function AdminDashboard() {
                 </select>
               </Field>
 
-              <Field label="Imagen *">
-                <div className="space-y-2">
-                  {/* Preview */}
-                  {(imagePreview || form.image) && (
-                    <div className="relative w-full h-40 rounded-xl overflow-hidden bg-mate-50 border border-mate-200">
-                      <Image
-                        src={imagePreview || form.image}
-                        alt="Preview"
-                        fill
-                        className="object-cover"
-                        sizes="400px"
-                      />
+              <Field label="Imágenes *">
+                <div className="space-y-3">
+                  {/* Grid de imágenes cargadas */}
+                  {form.images.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {form.images.map((url, i) => (
+                        <div key={url} className="relative group">
+                          <div className="relative h-24 rounded-xl overflow-hidden bg-mate-50 border-2 border-mate-200">
+                            <Image src={url} alt={`Imagen ${i + 1}`} fill className="object-cover" sizes="120px" />
+                            {i === 0 && (
+                              <span className="absolute bottom-1 left-1 bg-mate-800 text-white text-xs px-1.5 py-0.5 rounded-full">Principal</span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeExtraImage(url)}
+                            className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   )}
-                  {/* Upload button */}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="hidden"
-                    onChange={handleImageUpload}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current.click()}
-                    disabled={uploadingImage}
-                    className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-mate-300 hover:border-mate-500 rounded-xl py-3 text-sm text-mate-600 hover:text-mate-800 transition-colors disabled:opacity-50"
-                  >
-                    {uploadingImage ? (
-                      <span>Subiendo...</span>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4" />
-                        {form.image ? 'Cambiar imagen' : 'Subir imagen desde la PC'}
-                      </>
-                    )}
-                  </button>
-                  {/* URL manual como alternativa */}
-                  <input
-                    type="url"
-                    value={form.image}
-                    onChange={(e) => { setForm({ ...form, image: e.target.value }); setImagePreview(e.target.value); }}
-                    className="input-base text-xs text-mate-400"
-                    placeholder="O pegá una URL de imagen..."
-                  />
+
+                  {/* Botones de subida */}
+                  <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageUpload} />
+                  <input ref={multiFileInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={handleExtraImagesUpload} />
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current.click()}
+                      disabled={uploadingImage}
+                      className="flex-1 flex items-center justify-center gap-2 border-2 border-dashed border-mate-300 hover:border-mate-500 rounded-xl py-2.5 text-sm text-mate-600 hover:text-mate-800 transition-colors disabled:opacity-50"
+                    >
+                      <Upload className="w-4 h-4" />
+                      {form.images.length === 0 ? 'Subir imagen principal' : 'Cambiar principal'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => multiFileInputRef.current.click()}
+                      disabled={uploadingImage}
+                      className="flex-1 flex items-center justify-center gap-2 border-2 border-dashed border-mate-300 hover:border-mate-500 rounded-xl py-2.5 text-sm text-mate-600 hover:text-mate-800 transition-colors disabled:opacity-50"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                      {uploadingImage ? 'Subiendo...' : 'Agregar más fotos'}
+                    </button>
+                  </div>
                 </div>
               </Field>
 

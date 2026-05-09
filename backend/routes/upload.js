@@ -42,4 +42,9 @@ router.post('/comprobante', uploadComprobante.single('image'), (req, res) => {
   res.json({ url: req.file.path });
 });
 
+router.post('/multiple', auth, uploadProducto.array('images', 10), (req, res) => {
+  if (!req.files?.length) return res.status(400).json({ message: 'No se recibieron imágenes' });
+  res.json({ urls: req.files.map((f) => f.path) });
+});
+
 module.exports = router;

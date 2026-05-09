@@ -6,12 +6,11 @@ import ProductCard from '@/components/ProductCard';
 import { productsAPI } from '@/lib/api';
 
 const CATEGORIES = [
-  { slug: '', label: 'Todos' },
-  { slug: 'calabaza', label: 'Calabaza' },
-  { slug: 'algarrobo', label: 'Algarrobo' },
-  { slug: 'madera', label: 'Madera' },
-  { slug: 'acero', label: 'Acero' },
-  { slug: 'otros', label: 'Otros' },
+  { slug: '', label: 'Todos', emoji: '🛍️' },
+  { slug: 'calabaza', label: 'Calabaza', emoji: '🍵' },
+  { slug: 'algarrobo', label: 'Algarrobo', emoji: '🪵' },
+  { slug: 'acero', label: 'Acero', emoji: '⚗️' },
+  { slug: 'otros', label: 'Otros', emoji: '✨' },
 ];
 
 export default function ProductosPage() {
@@ -52,23 +51,26 @@ export default function ProductosPage() {
         </p>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-8">
-        <div className="flex flex-wrap gap-2">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.slug}
-              onClick={() => setActiveCategory(cat.slug)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                activeCategory === cat.slug
-                  ? 'bg-mate-700 text-white shadow-sm'
-                  : 'bg-white text-mate-700 border border-mate-200 hover:border-mate-400 hover:bg-mate-50'
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
+      {/* Categorías visuales */}
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-8">
+        {CATEGORIES.map((cat) => (
+          <button
+            key={cat.slug}
+            onClick={() => setActiveCategory(cat.slug)}
+            className={`flex flex-col items-center gap-1.5 py-4 px-2 rounded-2xl border-2 transition-all duration-200 ${
+              activeCategory === cat.slug
+                ? 'bg-mate-800 border-mate-800 text-white shadow-md'
+                : 'bg-white border-mate-200 text-mate-700 hover:border-mate-400 hover:bg-mate-50'
+            }`}
+          >
+            <span className="text-2xl">{cat.emoji}</span>
+            <span className="text-xs font-semibold">{cat.label}</span>
+          </button>
+        ))}
+      </div>
 
+      {/* Filtro stock */}
+      <div className="flex justify-end mb-6">
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <SlidersHorizontal className="w-4 h-4 text-mate-500" />
           <span className="text-sm text-mate-600">Mostrar sin stock</span>
@@ -91,7 +93,7 @@ export default function ProductosPage() {
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {[...Array(8)].map((_, i) => (
             <div key={i} className="bg-white rounded-2xl shadow-sm overflow-hidden animate-pulse">
-              <div className="h-56 bg-mate-100" />
+              <div className="h-36 sm:h-56 bg-mate-100" />
               <div className="p-4 space-y-2">
                 <div className="h-4 bg-mate-100 rounded w-3/4" />
                 <div className="h-3 bg-mate-100 rounded w-full" />

@@ -11,7 +11,6 @@ import toast from 'react-hot-toast';
 const CATEGORY_LABELS = {
   calabaza: 'Calabaza',
   algarrobo: 'Algarrobo',
-  madera: 'Madera',
   acero: 'Acero',
   otros: 'Otros',
 };
@@ -22,6 +21,7 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
@@ -65,6 +65,8 @@ export default function ProductDetailPage() {
 
   const outOfStock = product.stock === 0;
   const originalPrice = Math.round(product.price * 1.15);
+  const allImages = product.images?.length ? product.images : [product.image];
+  const mainImage = selectedImage || allImages[0];
 
   return (
     <>
@@ -79,30 +81,47 @@ export default function ProductDetailPage() {
         </Link>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16">
-          {/* Image */}
-          <div
-            className="relative bg-mate-50 rounded-2xl overflow-hidden cursor-zoom-in group"
-            style={{ minHeight: '380px' }}
-            onClick={() => setLightboxOpen(true)}
-          >
-            <Image
-              src={product.image}
-              alt={product.name}
-              fill
-              className="object-contain p-4"
-              sizes="(max-width: 768px) 100vw, 50vw"
-              priority
-            />
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded-full p-2">
-                <ZoomIn className="w-5 h-5 text-mate-800" />
+          {/* Image gallery */}
+          <div className="space-y-3">
+            <div
+              className="relative bg-mate-50 rounded-2xl overflow-hidden cursor-zoom-in group"
+              style={{ minHeight: '380px' }}
+              onClick={() => setLightboxOpen(true)}
+            >
+              <Image
+                src={mainImage}
+                alt={product.name}
+                fill
+                className="object-contain p-4"
+                sizes="(max-width: 768px) 100vw, 50vw"
+                priority
+              />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded-full p-2">
+                  <ZoomIn className="w-5 h-5 text-mate-800" />
+                </div>
               </div>
+              {outOfStock && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                  <span className="bg-white text-mate-800 font-semibold px-5 py-2 rounded-full text-sm">
+                    Sin stock
+                  </span>
+                </div>
+              )}
             </div>
-            {outOfStock && (
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                <span className="bg-white text-mate-800 font-semibold px-5 py-2 rounded-full text-sm">
-                  Sin stock
-                </span>
+            {allImages.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {allImages.map((img, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSelectedImage(img)}
+                    className={`relative flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
+                      mainImage === img ? 'border-mate-700' : 'border-mate-200 hover:border-mate-400'
+                    }`}
+                  >
+                    <Image src={img} alt={`Foto ${i + 1}`} fill className="object-cover" sizes="64px" />
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -207,7 +226,7 @@ export default function ProductDetailPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <Image
-              src={product.image}
+              src={mainImage}
               alt={product.name}
               fill
               className="object-contain"

@@ -1,7 +1,8 @@
 'use client';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState } from 'react';
-import { ShoppingCart, Menu, X, Leaf, LayoutDashboard } from 'lucide-react';
+import { ShoppingCart, Menu, X, LayoutDashboard } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 
@@ -14,8 +15,10 @@ export default function Navbar() {
     <header className="sticky top-0 z-40 bg-mate-800 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-2 text-white hover:opacity-90 transition-opacity">
-            <Leaf className="w-6 h-6 text-mate-300" />
+          <Link href="/" className="flex items-center gap-2.5 text-white hover:opacity-90 transition-opacity">
+            <div className="relative w-9 h-9 rounded-full overflow-hidden bg-mate-600 flex-shrink-0">
+              <Image src="/logo.jpg" alt="Mate Noble" fill className="object-cover" sizes="36px" />
+            </div>
             <span className="text-xl font-bold tracking-tight">Mate Noble</span>
           </Link>
 

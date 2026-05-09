@@ -8,7 +8,6 @@ import toast from 'react-hot-toast';
 const CATEGORY_LABELS = {
   calabaza: 'Calabaza',
   algarrobo: 'Algarrobo',
-  madera: 'Madera',
   acero: 'Acero',
   otros: 'Otros',
 };
@@ -31,7 +30,7 @@ export default function ProductCard({ product }) {
         {/* Image */}
         <div className="relative h-36 sm:h-56 bg-mate-50 overflow-hidden">
           <Image
-            src={product.image}
+            src={product.images?.[0] || product.image}
             alt={product.name}
             fill
             className="object-contain p-2 group-hover:scale-105 transition-transform duration-500"
