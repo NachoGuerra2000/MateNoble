@@ -37,7 +37,7 @@ export default function AdminDashboard() {
   const multiFileInputRef = useRef(null);
 
   useEffect(() => {
-    if (!isAuthenticated) router.replace('/admin/login');
+    if (!isAuthenticated) router.replace('/acceso/login');
   }, [isAuthenticated, router]);
 
   const loadProducts = useCallback(async () => {

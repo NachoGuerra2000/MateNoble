@@ -151,6 +151,7 @@ export default function PagoPage() {
                 <div>
                   <p className="text-xs text-mate-500 mb-0.5">Alias</p>
                   <span className="font-bold text-mate-800 text-xl tracking-wide">{MP_ALIAS}</span>
+                  <p className="text-xs text-mate-500 mt-1">A nombre de <span className="font-medium text-mate-700">Maria Justina Moraga Fagalde</span></p>
                 </div>
                 <button onClick={handleCopy} className="text-mate-400 hover:text-mate-700 transition-colors ml-2">
                   {copied ? <CheckCircle className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5" />}

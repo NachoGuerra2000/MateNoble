@@ -14,7 +14,7 @@ export default function AdminLoginPage() {
   const [showPass, setShowPass] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) router.replace('/admin/dashboard');
+    if (isAuthenticated) router.replace('/acceso/dashboard');
   }, [isAuthenticated, router]);
 
   const handleSubmit = async (e) => {
@@ -28,7 +28,7 @@ export default function AdminLoginPage() {
       const data = await authAPI.login(form);
       login(data.token, data.username);
       toast.success(`Bienvenido, ${data.username}`);
-      router.push('/admin/dashboard');
+      router.push('/acceso/dashboard');
     } catch (err) {
       toast.error(err.message || 'Credenciales incorrectas');
     } finally {

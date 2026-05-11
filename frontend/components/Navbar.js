@@ -2,13 +2,11 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState } from 'react';
-import { ShoppingCart, Menu, X, LayoutDashboard } from 'lucide-react';
+import { ShoppingCart, Menu, X } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
-import { useAuth } from '@/context/AuthContext';
 
 export default function Navbar() {
   const { itemCount, openCart } = useCart();
-  const { isAuthenticated } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -29,15 +27,6 @@ export default function Navbar() {
             <Link href="/productos" className="text-mate-100 hover:text-white transition-colors text-sm font-medium">
               Productos
             </Link>
-            {isAuthenticated && (
-              <Link
-                href="/admin/dashboard"
-                className="flex items-center gap-1.5 bg-mate-600 hover:bg-mate-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors"
-              >
-                <LayoutDashboard className="w-4 h-4" />
-                Panel Admin
-              </Link>
-            )}
           </nav>
 
           <div className="flex items-center gap-3">
@@ -72,16 +61,6 @@ export default function Navbar() {
           <Link href="/productos" onClick={() => setMenuOpen(false)} className="block text-mate-100 hover:text-white font-medium">
             Productos
           </Link>
-          {isAuthenticated && (
-            <Link
-              href="/admin/dashboard"
-              onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-2 bg-mate-600 text-white font-semibold px-4 py-2 rounded-lg w-fit"
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              Panel Admin
-            </Link>
-          )}
         </div>
       )}
     </header>

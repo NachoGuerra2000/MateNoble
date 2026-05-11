@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npm install *)",
       "Bash(Copy-Item *)",
-      "PowerShell(New-Item *)"
+      "PowerShell(New-Item *)",
+      "PowerShell(Rename-Item *)"
     ]
   }
 }
