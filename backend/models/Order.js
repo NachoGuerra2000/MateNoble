@@ -20,6 +20,7 @@ const orderSchema = new mongoose.Schema(
     shipping: { type: Number, default: 0 },
     total: { type: Number, required: true },
     comprobante: { type: String, default: null },
+    paymentMethod: { type: String, enum: ['transferencia', 'efectivo'], default: 'transferencia' },
     status: { type: String, default: 'pendiente' },
   },
   { timestamps: true }

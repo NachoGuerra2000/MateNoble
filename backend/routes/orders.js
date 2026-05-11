@@ -38,6 +38,7 @@ const sendAdminEmail = async (order) => {
             <tr><td style="padding:4px 0;color:#555">Teléfono:</td><td style="padding:4px 0">${order.customer.phone}</td></tr>
             <tr><td style="padding:4px 0;color:#555">Dirección:</td><td style="padding:4px 0">${order.customer.address}</td></tr>
             <tr><td style="padding:4px 0;color:#555">Zona:</td><td style="padding:4px 0">${ZONE_LABELS[order.customer.zone]}</td></tr>
+            <tr><td style="padding:4px 0;color:#555">Pago:</td><td style="padding:4px 0;font-weight:bold;color:${order.paymentMethod === 'efectivo' ? '#d97706' : '#164721'}">${order.paymentMethod === 'efectivo' ? '💵 Efectivo (coordinar con el cliente)' : '🏦 Transferencia'}</td></tr>
           </table>
 
           <h2 style="color:#164721">Productos</h2>
@@ -58,7 +59,12 @@ const sendAdminEmail = async (order) => {
             <p style="margin:8px 0;font-size:18px;color:#164721">TOTAL: <strong>$${order.total.toLocaleString('es-AR')}</strong></p>
           </div>
 
-          ${order.comprobante ? `
+          ${order.paymentMethod === 'efectivo' ? `
+          <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:12px;margin-top:16px">
+            <p style="margin:0;color:#92400e;font-weight:bold">💵 Pago en efectivo</p>
+            <p style="margin:4px 0 0;color:#92400e;font-size:13px">Coordinar entrega y cobro con el cliente.</p>
+          </div>
+          ` : order.comprobante ? `
           <h2 style="color:#164721">Comprobante de pago</h2>
           <img src="${order.comprobante}" style="max-width:100%;border-radius:8px;border:1px solid #d8f3dc" alt="Comprobante"/>
           ` : ''}
@@ -101,7 +107,7 @@ router.post('/', async (req, res) => {
     const shipping = customer.zone === 'san_miguel' ? SHIPPING_COST : 0;
     const total = subtotal + shipping;
 
-    const order = new Order({ customer, items, subtotal, shipping, total, comprobante: req.body.comprobante || null });
+    const order = new Order({ customer, items, subtotal, shipping, total, comprobante: req.body.comprobante || null, paymentMethod: req.body.paymentMethod || 'transferencia' });
     await order.save();
 
     // Notificaciones en paralelo, sin bloquear la respuesta
