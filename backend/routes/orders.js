@@ -1,6 +1,8 @@
 const express = require('express');
 const { Resend } = require('resend');
 const Order = require('../models/Order');
+const Product = require('../models/Product');
+const Transaction = require('../models/Transaction');
 const auth = require('../middleware/authMiddleware');
 
 const router = express.Router();
@@ -109,6 +111,29 @@ router.post('/', async (req, res) => {
 
     const order = new Order({ customer, items, subtotal, shipping, total, comprobante: req.body.comprobante || null, paymentMethod: req.body.paymentMethod || 'transferencia' });
     await order.save();
+
+    // Descontar stock y registrar la venta de cada producto, sin bloquear la respuesta
+    Promise.all(
+      items.map(async (item) => {
+        if (!item.productId) return;
+        const product = await Product.findById(item.productId);
+        if (!product) return;
+
+        product.stock = Math.max(0, product.stock - item.quantity);
+        await product.save();
+
+        await Transaction.create({
+          type: 'venta',
+          product: product._id,
+          productName: item.name,
+          quantity: item.quantity,
+          unitPrice: item.price,
+          unitCost: product.costPrice,
+          total: item.price * item.quantity,
+          orderId: order._id,
+        });
+      })
+    ).catch((err) => console.error('Error al actualizar stock/transacciones:', err));
 
     // Notificaciones en paralelo, sin bloquear la respuesta
     Promise.all([

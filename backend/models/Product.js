@@ -4,13 +4,14 @@ const productSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     price: { type: Number, required: true, min: 0 },
+    costPrice: { type: Number, required: true, min: 0, default: 0 },
     image: { type: String, required: true },
     images: { type: [String], default: [] },
     description: { type: String, required: true },
     category: {
       type: String,
       required: true,
-      enum: ['calabaza', 'algarrobo', 'acero', 'otros'],
+      enum: ['calabaza', 'algarrobo', 'acero', 'materas', 'bolsos', 'otros'],
     },
     stock: { type: Number, required: true, min: 0, default: 0 },
     featured: { type: Boolean, default: false },

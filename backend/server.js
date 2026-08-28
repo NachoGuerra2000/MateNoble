@@ -14,6 +14,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/orders', require('./routes/orders'));
+app.use('/api/transactions', require('./routes/transactions'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
