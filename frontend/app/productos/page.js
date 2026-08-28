@@ -10,6 +10,8 @@ const CATEGORIES = [
   { slug: 'calabaza', label: 'Calabaza', emoji: '🍵' },
   { slug: 'algarrobo', label: 'Algarrobo', emoji: '🪵' },
   { slug: 'acero', label: 'Acero', emoji: '⚗️' },
+  { slug: 'materas', label: 'Materas', emoji: '🎒' },
+  { slug: 'bolsos', label: 'Bolsos', emoji: '👜' },
   { slug: 'otros', label: 'Otros', emoji: '✨' },
 ];
 
@@ -52,7 +54,7 @@ export default function ProductosPage() {
       </div>
 
       {/* Categorías visuales */}
-      <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-8">
+      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-8">
         {CATEGORIES.map((cat) => (
           <button
             key={cat.slug}

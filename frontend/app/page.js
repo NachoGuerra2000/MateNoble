@@ -1,11 +1,14 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import ProductCard from '@/components/ProductCard';
+import FeaturedCarousel from '@/components/FeaturedCarousel';
 
 const CATEGORIES = [
   { slug: 'calabaza', label: 'Calabaza', emoji: '🍵', desc: 'La base de la tradición' },
   { slug: 'algarrobo', label: 'Algarrobo', emoji: '🪵', desc: 'Madera del norte argentino' },
   { slug: 'acero', label: 'Acero', emoji: '⚗️', desc: 'Resistente y moderno' },
+  { slug: 'materas', label: 'Materas', emoji: '🎒', desc: 'Para llevar tu set a todos lados' },
+  { slug: 'bolsos', label: 'Bolsos', emoji: '👜', desc: 'Diseño y funcionalidad' },
   { slug: 'otros', label: 'Otros', emoji: '✨', desc: 'Nuevas propuestas' },
 ];
 
@@ -71,39 +74,7 @@ export default async function HomePage() {
             </div>
 
             {/* Productos destacados en el hero */}
-            {featured.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-mate-200 font-semibold text-sm uppercase tracking-wide">Destacados</p>
-                  <Link href="/productos" className="text-mate-300 hover:text-white text-sm transition-colors">
-                    Ver todos →
-                  </Link>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {featured.slice(0, 4).map((p) => (
-                    <Link
-                      key={p._id}
-                      href={`/productos/${p._id}`}
-                      className="bg-white/10 hover:bg-white/20 border border-white/20 rounded-2xl overflow-hidden transition-all duration-200 group"
-                    >
-                      <div className="relative h-32 bg-mate-700/30">
-                        <Image
-                          src={p.images?.[0] || p.image}
-                          alt={p.name}
-                          fill
-                          className="object-contain p-2 group-hover:scale-105 transition-transform duration-300"
-                          sizes="200px"
-                        />
-                      </div>
-                      <div className="p-3">
-                        <p className="text-white text-xs font-semibold line-clamp-1">{p.name}</p>
-                        <p className="text-mate-300 text-xs mt-0.5">${p.price.toLocaleString('es-AR')}</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
+            {featured.length > 0 && <FeaturedCarousel products={featured} />}
           </div>
         </div>
       </section>
@@ -115,7 +86,7 @@ export default async function HomePage() {
             <h2 className="text-3xl font-bold text-white">Explorar por categoría</h2>
             <p className="text-mate-200 mt-2">Encontrá el mate ideal para vos</p>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {CATEGORIES.map((cat) => (
               <Link
                 key={cat.slug}

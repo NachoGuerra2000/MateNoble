@@ -2,9 +2,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Plus, Pencil, Trash2, LogOut, Package, AlertCircle, X, Upload, ImageIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, LogOut, Package, AlertCircle, X, Upload, ImageIcon, PackagePlus, DollarSign, TrendingUp, Wallet, Receipt } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { productsAPI } from '@/lib/api';
+import { productsAPI, transactionsAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -13,11 +13,13 @@ const CATEGORIES = [
   { value: 'calabaza', label: 'Calabaza' },
   { value: 'algarrobo', label: 'Algarrobo' },
   { value: 'acero', label: 'Acero' },
+  { value: 'materas', label: 'Materas' },
+  { value: 'bolsos', label: 'Bolsos' },
   { value: 'otros', label: 'Otros' },
 ];
 
 const EMPTY_FORM = {
-  name: '', price: '', image: '', images: [], description: '',
+  name: '', price: '', costPrice: '', image: '', images: [], description: '',
   category: 'calabaza', stock: '', featured: false, active: true,
 };
 
@@ -36,6 +38,14 @@ export default function AdminDashboard() {
   const fileInputRef = useRef(null);
   const multiFileInputRef = useRef(null);
 
+  const [tab, setTab] = useState('productos');
+  const [restockProduct, setRestockProduct] = useState(null);
+  const [restockForm, setRestockForm] = useState({ quantity: '', costPrice: '' });
+  const [restocking, setRestocking] = useState(false);
+  const [summary, setSummary] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [financeLoading, setFinanceLoading] = useState(true);
+
   useEffect(() => {
     if (!isAuthenticated) router.replace('/acceso/login');
   }, [isAuthenticated, router]);
@@ -53,7 +63,54 @@ export default function AdminDashboard() {
     }
   }, [token]);
 
+  const loadFinance = useCallback(async () => {
+    if (!token) return;
+    setFinanceLoading(true);
+    try {
+      const [summaryData, transactionsData] = await Promise.all([
+        transactionsAPI.getSummary(token),
+        transactionsAPI.getAll(token),
+      ]);
+      setSummary(summaryData);
+      setTransactions(transactionsData);
+    } catch {
+      toast.error('Error al cargar las finanzas');
+    } finally {
+      setFinanceLoading(false);
+    }
+  }, [token]);
+
   useEffect(() => { loadProducts(); }, [loadProducts]);
+  useEffect(() => { if (tab === 'finanzas') loadFinance(); }, [tab, loadFinance]);
+
+  const openRestock = (product) => {
+    setRestockProduct(product);
+    setRestockForm({ quantity: '', costPrice: product.costPrice ?? '' });
+  };
+
+  const handleRestock = async (e) => {
+    e.preventDefault();
+    const qty = Number(restockForm.quantity);
+    if (!qty || qty <= 0) {
+      toast.error('Ingresá una cantidad válida');
+      return;
+    }
+    setRestocking(true);
+    try {
+      await productsAPI.restock(
+        restockProduct._id,
+        { quantity: qty, costPrice: restockForm.costPrice === '' ? undefined : Number(restockForm.costPrice) },
+        token
+      );
+      toast.success('Stock repuesto');
+      setRestockProduct(null);
+      loadProducts();
+    } catch (err) {
+      toast.error(err.message || 'Error al reponer stock');
+    } finally {
+      setRestocking(false);
+    }
+  };
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -130,6 +187,7 @@ export default function AdminDashboard() {
     setForm({
       name: product.name,
       price: product.price,
+      costPrice: product.costPrice ?? '',
       image: product.image,
       images,
       description: product.description,
@@ -143,13 +201,13 @@ export default function AdminDashboard() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.price || !form.image || !form.description || form.stock === '') {
+    if (!form.name || !form.price || form.costPrice === '' || !form.image || !form.description || form.stock === '') {
       toast.error('Completá todos los campos obligatorios');
       return;
     }
     setSaving(true);
     const images = form.images.length ? form.images : (form.image ? [form.image] : []);
-    const payload = { ...form, price: Number(form.price), stock: Number(form.stock), images, image: images[0] || form.image };
+    const payload = { ...form, price: Number(form.price), costPrice: Number(form.costPrice), stock: Number(form.stock), images, image: images[0] || form.image };
     try {
       if (editingProduct) {
         await productsAPI.update(editingProduct._id, payload, token);
@@ -207,6 +265,24 @@ export default function AdminDashboard() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Tabs */}
+        <div className="flex gap-2 mb-8 bg-white rounded-xl p-1.5 shadow-sm w-fit">
+          <button
+            onClick={() => setTab('productos')}
+            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === 'productos' ? 'bg-mate-800 text-white' : 'text-mate-600 hover:bg-mate-50'}`}
+          >
+            Productos
+          </button>
+          <button
+            onClick={() => setTab('finanzas')}
+            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === 'finanzas' ? 'bg-mate-800 text-white' : 'text-mate-600 hover:bg-mate-50'}`}
+          >
+            Finanzas
+          </button>
+        </div>
+
+        {tab === 'productos' && (
+        <>
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           {[
@@ -288,6 +364,13 @@ export default function AdminDashboard() {
                       <td className="px-5 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
+                            onClick={() => openRestock(p)}
+                            className={`p-1.5 rounded-lg transition-colors ${p.stock === 0 ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-mate-500 hover:text-mate-800 hover:bg-mate-100'}`}
+                            title="Reponer stock"
+                          >
+                            <PackagePlus className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={() => openEdit(p)}
                             className="p-1.5 text-mate-500 hover:text-mate-800 hover:bg-mate-100 rounded-lg transition-colors"
                             title="Editar"
@@ -310,6 +393,112 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+        </>
+        )}
+
+        {tab === 'finanzas' && (
+        <>
+        {financeLoading ? (
+          <div className="p-16 text-center text-mate-400">Cargando finanzas...</div>
+        ) : (
+        <>
+        {/* Finance stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {[
+            { label: 'Invertido total', value: summary?.totalInvested ?? 0, icon: Wallet, color: 'text-mate-700' },
+            { label: 'Ingresos por ventas', value: summary?.totalRevenue ?? 0, icon: DollarSign, color: 'text-blue-600' },
+            { label: 'Costo de lo vendido', value: summary?.totalCost ?? 0, icon: Receipt, color: 'text-mate-500' },
+            { label: 'Ganancia', value: summary?.totalProfit ?? 0, icon: TrendingUp, color: 'text-green-600' },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-white rounded-xl p-5 shadow-sm flex items-center gap-4">
+              <stat.icon className={`w-8 h-8 flex-shrink-0 ${stat.color}`} />
+              <div>
+                <p className="text-xl font-bold text-mate-900">${stat.value.toLocaleString('es-AR')}</p>
+                <p className="text-mate-500 text-sm">{stat.label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Per-product breakdown */}
+        <h2 className="text-xl font-bold text-mate-900 mb-4">Ganancia por producto</h2>
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-8">
+          {!summary?.products?.length ? (
+            <div className="p-10 text-center text-mate-400">Todavía no hay movimientos.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-mate-50 border-b border-mate-100">
+                  <tr>
+                    <th className="text-left px-5 py-3 font-semibold text-mate-600">Producto</th>
+                    <th className="text-right px-4 py-3 font-semibold text-mate-600">Invertido</th>
+                    <th className="text-center px-4 py-3 font-semibold text-mate-600">Vendidos</th>
+                    <th className="text-right px-4 py-3 font-semibold text-mate-600">Ingresos</th>
+                    <th className="text-right px-5 py-3 font-semibold text-mate-600">Ganancia</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-mate-50">
+                  {summary.products.map((p) => (
+                    <tr key={p.productName} className="hover:bg-mate-50/50 transition-colors">
+                      <td className="px-5 py-3 font-medium text-mate-800">{p.productName}</td>
+                      <td className="px-4 py-3 text-right text-mate-600">${p.invested.toLocaleString('es-AR')}</td>
+                      <td className="px-4 py-3 text-center text-mate-600">{p.unitsSold}</td>
+                      <td className="px-4 py-3 text-right text-mate-600">${p.revenue.toLocaleString('es-AR')}</td>
+                      <td className={`px-5 py-3 text-right font-semibold ${p.profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                        ${p.profit.toLocaleString('es-AR')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Transaction ledger */}
+        <h2 className="text-xl font-bold text-mate-900 mb-4">Movimientos</h2>
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          {!transactions.length ? (
+            <div className="p-10 text-center text-mate-400">Todavía no hay movimientos.</div>
+          ) : (
+            <div className="overflow-x-auto max-h-[28rem] overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-mate-50 border-b border-mate-100 sticky top-0">
+                  <tr>
+                    <th className="text-left px-5 py-3 font-semibold text-mate-600">Fecha</th>
+                    <th className="text-left px-4 py-3 font-semibold text-mate-600">Tipo</th>
+                    <th className="text-left px-4 py-3 font-semibold text-mate-600">Producto</th>
+                    <th className="text-center px-4 py-3 font-semibold text-mate-600">Cant.</th>
+                    <th className="text-right px-5 py-3 font-semibold text-mate-600">Monto</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-mate-50">
+                  {transactions.map((t) => (
+                    <tr key={t._id} className="hover:bg-mate-50/50 transition-colors">
+                      <td className="px-5 py-3 text-mate-500 whitespace-nowrap">
+                        {new Date(t.createdAt).toLocaleDateString('es-AR')}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${t.type === 'compra' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                          {t.type === 'compra' ? 'Compra' : 'Venta'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-mate-800">{t.productName}</td>
+                      <td className="px-4 py-3 text-center text-mate-600">{t.quantity}</td>
+                      <td className={`px-5 py-3 text-right font-semibold ${t.type === 'compra' ? 'text-amber-700' : 'text-green-700'}`}>
+                        {t.type === 'compra' ? '-' : '+'}${t.total.toLocaleString('es-AR')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+        </>
+        )}
+        </>
+        )}
       </div>
 
       {/* Product Modal */}
@@ -337,7 +526,17 @@ export default function AdminDashboard() {
               </Field>
 
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Precio (ARS) *">
+                <Field label="Precio de compra (ARS) *">
+                  <input
+                    type="number"
+                    min="0"
+                    value={form.costPrice}
+                    onChange={(e) => setForm({ ...form, costPrice: e.target.value })}
+                    className="input-base"
+                    placeholder="1500"
+                  />
+                </Field>
+                <Field label="Precio de venta (ARS) *">
                   <input
                     type="number"
                     min="0"
@@ -347,17 +546,18 @@ export default function AdminDashboard() {
                     placeholder="2500"
                   />
                 </Field>
-                <Field label="Stock *">
-                  <input
-                    type="number"
-                    min="0"
-                    value={form.stock}
-                    onChange={(e) => setForm({ ...form, stock: e.target.value })}
-                    className="input-base"
-                    placeholder="10"
-                  />
-                </Field>
               </div>
+
+              <Field label="Stock *">
+                <input
+                  type="number"
+                  min="0"
+                  value={form.stock}
+                  onChange={(e) => setForm({ ...form, stock: e.target.value })}
+                  className="input-base"
+                  placeholder="10"
+                />
+              </Field>
 
               <Field label="Categoría *">
                 <select
@@ -496,6 +696,63 @@ export default function AdminDashboard() {
                 Eliminar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Restock modal */}
+      {restockProduct && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-lg font-bold text-mate-900">Reponer stock</h3>
+              <button onClick={() => setRestockProduct(null)} className="text-mate-400 hover:text-mate-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-mate-500 text-sm mb-5">{restockProduct.name}</p>
+
+            <form onSubmit={handleRestock} className="space-y-4">
+              <Field label="Cantidad que agregás *">
+                <input
+                  type="number"
+                  min="1"
+                  autoFocus
+                  value={restockForm.quantity}
+                  onChange={(e) => setRestockForm({ ...restockForm, quantity: e.target.value })}
+                  className="input-base"
+                  placeholder="5"
+                />
+              </Field>
+              <Field label="Precio de compra actual (ARS)">
+                <input
+                  type="number"
+                  min="0"
+                  value={restockForm.costPrice}
+                  onChange={(e) => setRestockForm({ ...restockForm, costPrice: e.target.value })}
+                  className="input-base"
+                  placeholder={String(restockProduct.costPrice ?? 0)}
+                />
+              </Field>
+              <p className="text-xs text-mate-400 -mt-2">Stock actual: {restockProduct.stock}</p>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setRestockProduct(null)}
+                  className="flex-1 border border-mate-200 text-mate-700 py-3 rounded-xl font-medium hover:bg-mate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={restocking}
+                  className="flex-1 bg-mate-800 text-white py-3 rounded-xl font-semibold hover:bg-mate-700 transition-colors disabled:opacity-60"
+                >
+                  {restocking ? 'Guardando...' : 'Reponer'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -59,4 +59,23 @@ export const productsAPI = {
       method: 'DELETE',
       headers: buildHeaders(token),
     }).then(handleResponse),
+
+  restock: (id, data, token) =>
+    fetch(`${API_URL}/products/${id}/restock`, {
+      method: 'POST',
+      headers: buildHeaders(token),
+      body: JSON.stringify(data),
+    }).then(handleResponse),
+};
+
+export const transactionsAPI = {
+  getAll: (token) =>
+    fetch(`${API_URL}/transactions`, {
+      headers: buildHeaders(token),
+    }).then(handleResponse),
+
+  getSummary: (token) =>
+    fetch(`${API_URL}/transactions/summary`, {
+      headers: buildHeaders(token),
+    }).then(handleResponse),
 };
