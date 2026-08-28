@@ -1,5 +1,6 @@
 const express = require('express');
 const Transaction = require('../models/Transaction');
+const Product = require('../models/Product');
 const auth = require('../middleware/authMiddleware');
 
 const router = express.Router();
@@ -61,6 +62,31 @@ router.get('/summary', auth, async (req, res) => {
     });
   } catch {
     res.status(500).json({ message: 'Error al calcular el resumen' });
+  }
+});
+
+// DELETE /api/transactions/:id — solo admin: borra un movimiento y revierte su efecto en el stock
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const transaction = await Transaction.findById(req.params.id);
+    if (!transaction) return res.status(404).json({ message: 'Movimiento no encontrado' });
+
+    if (transaction.product) {
+      const product = await Product.findById(transaction.product);
+      if (product) {
+        if (transaction.type === 'compra') {
+          product.stock = Math.max(0, product.stock - transaction.quantity);
+        } else {
+          product.stock += transaction.quantity;
+        }
+        await product.save();
+      }
+    }
+
+    await transaction.deleteOne();
+    res.json({ message: 'Movimiento eliminado correctamente' });
+  } catch {
+    res.status(500).json({ message: 'Error al eliminar el movimiento' });
   }
 });
 
