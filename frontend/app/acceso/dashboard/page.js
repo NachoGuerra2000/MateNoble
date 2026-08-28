@@ -50,18 +50,28 @@ export default function AdminDashboard() {
     if (!isAuthenticated) router.replace('/acceso/login');
   }, [isAuthenticated, router]);
 
+  const handleAuthError = useCallback((err) => {
+    if (err?.status === 401) {
+      logout();
+      toast.error('Tu sesión expiró, iniciá sesión de nuevo');
+      router.replace('/acceso/login');
+      return true;
+    }
+    return false;
+  }, [logout, router]);
+
   const loadProducts = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     try {
       const data = await productsAPI.getAllAdmin(token);
       setProducts(data);
-    } catch {
-      toast.error('Error al cargar productos');
+    } catch (err) {
+      if (!handleAuthError(err)) toast.error('Error al cargar productos');
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, handleAuthError]);
 
   const loadFinance = useCallback(async () => {
     if (!token) return;
@@ -73,12 +83,12 @@ export default function AdminDashboard() {
       ]);
       setSummary(summaryData);
       setTransactions(transactionsData);
-    } catch {
-      toast.error('Error al cargar las finanzas');
+    } catch (err) {
+      if (!handleAuthError(err)) toast.error('Error al cargar las finanzas');
     } finally {
       setFinanceLoading(false);
     }
-  }, [token]);
+  }, [token, handleAuthError]);
 
   useEffect(() => { loadProducts(); }, [loadProducts]);
   useEffect(() => { if (tab === 'finanzas') loadFinance(); }, [tab, loadFinance]);
@@ -106,7 +116,7 @@ export default function AdminDashboard() {
       setRestockProduct(null);
       loadProducts();
     } catch (err) {
-      toast.error(err.message || 'Error al reponer stock');
+      if (!handleAuthError(err)) toast.error(err.message || 'Error al reponer stock');
     } finally {
       setRestocking(false);
     }
@@ -219,7 +229,7 @@ export default function AdminDashboard() {
       setModalOpen(false);
       loadProducts();
     } catch (err) {
-      toast.error(err.message || 'Error al guardar');
+      if (!handleAuthError(err)) toast.error(err.message || 'Error al guardar');
     } finally {
       setSaving(false);
     }
@@ -232,8 +242,8 @@ export default function AdminDashboard() {
       toast.success('Producto eliminado');
       setDeleteId(null);
       loadProducts();
-    } catch {
-      toast.error('Error al eliminar');
+    } catch (err) {
+      if (!handleAuthError(err)) toast.error('Error al eliminar');
     }
   };
 

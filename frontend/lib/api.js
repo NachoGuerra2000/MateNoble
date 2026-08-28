@@ -8,7 +8,11 @@ const buildHeaders = (token) => {
 
 const handleResponse = async (res) => {
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Error en la solicitud');
+  if (!res.ok) {
+    const err = new Error(data.message || 'Error en la solicitud');
+    err.status = res.status;
+    throw err;
+  }
   return data;
 };
 
