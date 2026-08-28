@@ -45,6 +45,8 @@ export default function AdminDashboard() {
   const [summary, setSummary] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [financeLoading, setFinanceLoading] = useState(true);
+  const [deleteTransactionId, setDeleteTransactionId] = useState(null);
+  const [deletingTransaction, setDeletingTransaction] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) router.replace('/acceso/login');
@@ -92,6 +94,22 @@ export default function AdminDashboard() {
 
   useEffect(() => { loadProducts(); }, [loadProducts]);
   useEffect(() => { if (tab === 'finanzas') loadFinance(); }, [tab, loadFinance]);
+
+  const handleDeleteTransaction = async () => {
+    if (!deleteTransactionId) return;
+    setDeletingTransaction(true);
+    try {
+      await transactionsAPI.delete(deleteTransactionId, token);
+      toast.success('Movimiento eliminado');
+      setDeleteTransactionId(null);
+      loadFinance();
+      loadProducts();
+    } catch (err) {
+      if (!handleAuthError(err)) toast.error(err.message || 'Error al eliminar el movimiento');
+    } finally {
+      setDeletingTransaction(false);
+    }
+  };
 
   const openRestock = (product) => {
     setRestockProduct(product);
@@ -479,7 +497,8 @@ export default function AdminDashboard() {
                     <th className="text-left px-4 py-3 font-semibold text-mate-600">Tipo</th>
                     <th className="text-left px-4 py-3 font-semibold text-mate-600">Producto</th>
                     <th className="text-center px-4 py-3 font-semibold text-mate-600">Cant.</th>
-                    <th className="text-right px-5 py-3 font-semibold text-mate-600">Monto</th>
+                    <th className="text-right px-4 py-3 font-semibold text-mate-600">Monto</th>
+                    <th className="text-right px-5 py-3 font-semibold text-mate-600"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-mate-50">
@@ -495,8 +514,17 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-4 py-3 text-mate-800">{t.productName}</td>
                       <td className="px-4 py-3 text-center text-mate-600">{t.quantity}</td>
-                      <td className={`px-5 py-3 text-right font-semibold ${t.type === 'compra' ? 'text-amber-700' : 'text-green-700'}`}>
+                      <td className={`px-4 py-3 text-right font-semibold ${t.type === 'compra' ? 'text-amber-700' : 'text-green-700'}`}>
                         {t.type === 'compra' ? '-' : '+'}${t.total.toLocaleString('es-AR')}
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <button
+                          onClick={() => setDeleteTransactionId(t._id)}
+                          className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Borrar movimiento"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -709,6 +737,42 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Delete transaction confirm modal */}
+      {deleteTransactionId && (() => {
+        const t = transactions.find((tx) => tx._id === deleteTransactionId);
+        return (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center">
+              <Trash2 className="w-12 h-12 text-red-400 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-mate-900 mb-2">¿Borrar este movimiento?</h3>
+              {t && (
+                <p className="text-mate-600 text-sm mb-1">
+                  {t.type === 'compra' ? 'Compra' : 'Venta'} de {t.quantity} — {t.productName}
+                </p>
+              )}
+              <p className="text-mate-500 text-sm mb-6">
+                Se va a sacar de la caja y {t?.type === 'compra' ? 'se le va a restar el stock que había sumado' : 'se le va a devolver el stock al producto'}.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteTransactionId(null)}
+                  className="flex-1 border border-mate-200 text-mate-700 py-3 rounded-xl font-medium hover:bg-mate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteTransaction}
+                  disabled={deletingTransaction}
+                  className="flex-1 bg-red-500 text-white py-3 rounded-xl font-semibold hover:bg-red-600 transition-colors disabled:opacity-60"
+                >
+                  {deletingTransaction ? 'Borrando...' : 'Borrar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Restock modal */}
       {restockProduct && (

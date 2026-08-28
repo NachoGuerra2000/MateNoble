@@ -82,4 +82,10 @@ export const transactionsAPI = {
     fetch(`${API_URL}/transactions/summary`, {
       headers: buildHeaders(token),
     }).then(handleResponse),
+
+  delete: (id, token) =>
+    fetch(`${API_URL}/transactions/${id}`, {
+      method: 'DELETE',
+      headers: buildHeaders(token),
+    }).then(handleResponse),
 };

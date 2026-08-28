@@ -49,8 +49,14 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-mate-700 mt-10 pt-6 text-center text-xs text-mate-500">
-          © {new Date().getFullYear()} Mate Noble. Todos los derechos reservados.
+        <div className="border-t border-mate-700 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-3 text-xs text-mate-500">
+          <span>© {new Date().getFullYear()} Mate Noble. Todos los derechos reservados.</span>
+          <Link
+            href="/acceso/login"
+            className="text-mate-400 hover:text-white border border-mate-700 hover:border-mate-500 rounded-full px-4 py-1.5 transition-colors"
+          >
+            Acceso administrador
+          </Link>
         </div>
       </div>
     </footer>
