@@ -4,12 +4,12 @@ import ProductCard from '@/components/ProductCard';
 import FeaturedCarousel from '@/components/FeaturedCarousel';
 
 const CATEGORIES = [
-  { slug: 'calabaza', label: 'Calabaza', emoji: '🍵', desc: 'La base de la tradición' },
-  { slug: 'algarrobo', label: 'Algarrobo', emoji: '🪵', desc: 'Madera del norte argentino' },
-  { slug: 'acero', label: 'Acero', emoji: '⚗️', desc: 'Resistente y moderno' },
-  { slug: 'materas', label: 'Materas', emoji: '🎒', desc: 'Para llevar tu set a todos lados' },
-  { slug: 'bolsos', label: 'Bolsos', emoji: '👜', desc: 'Diseño y funcionalidad' },
-  { slug: 'otros', label: 'Otros', emoji: '✨', desc: 'Nuevas propuestas' },
+  { slug: 'calabaza', label: 'Calabaza', desc: 'La base de la tradición' },
+  { slug: 'algarrobo', label: 'Algarrobo', desc: 'Madera del norte argentino' },
+  { slug: 'acero', label: 'Acero', desc: 'Resistente y moderno' },
+  { slug: 'materas', label: 'Materas', desc: 'Para llevar tu set a todos lados' },
+  { slug: 'bolsos', label: 'Bolsos', desc: 'Diseño y funcionalidad' },
+  { slug: 'otros', label: 'Otros', desc: 'Nuevas propuestas' },
 ];
 
 async function getFeaturedProducts() {
@@ -93,8 +93,7 @@ export default async function HomePage() {
                 href={`/productos?categoria=${cat.slug}`}
                 className="bg-mate-700/60 hover:bg-mate-600 border border-mate-600/50 hover:border-mate-400 rounded-2xl p-6 text-center transition-all duration-200 group"
               >
-                <div className="text-4xl mb-3">{cat.emoji}</div>
-                <div className="text-white font-semibold">{cat.label}</div>
+                <div className="text-white font-semibold text-lg">{cat.label}</div>
                 <div className="text-mate-300 text-xs mt-1 group-hover:text-mate-200 transition-colors">
                   {cat.desc}
                 </div>

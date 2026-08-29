@@ -6,13 +6,13 @@ import ProductCard from '@/components/ProductCard';
 import { productsAPI } from '@/lib/api';
 
 const CATEGORIES = [
-  { slug: '', label: 'Todos', emoji: '🛍️' },
-  { slug: 'calabaza', label: 'Calabaza', emoji: '🍵' },
-  { slug: 'algarrobo', label: 'Algarrobo', emoji: '🪵' },
-  { slug: 'acero', label: 'Acero', emoji: '⚗️' },
-  { slug: 'materas', label: 'Materas', emoji: '🎒' },
-  { slug: 'bolsos', label: 'Bolsos', emoji: '👜' },
-  { slug: 'otros', label: 'Otros', emoji: '✨' },
+  { slug: '', label: 'Todos' },
+  { slug: 'calabaza', label: 'Calabaza' },
+  { slug: 'algarrobo', label: 'Algarrobo' },
+  { slug: 'acero', label: 'Acero' },
+  { slug: 'materas', label: 'Materas' },
+  { slug: 'bolsos', label: 'Bolsos' },
+  { slug: 'otros', label: 'Otros' },
 ];
 
 export default function ProductosPage() {
@@ -59,14 +59,13 @@ export default function ProductosPage() {
           <button
             key={cat.slug}
             onClick={() => setActiveCategory(cat.slug)}
-            className={`flex flex-col items-center gap-1.5 py-4 px-2 rounded-2xl border-2 transition-all duration-200 ${
+            className={`flex items-center justify-center py-4 px-2 rounded-2xl border-2 transition-all duration-200 ${
               activeCategory === cat.slug
                 ? 'bg-mate-800 border-mate-800 text-white shadow-md'
                 : 'bg-white border-mate-200 text-mate-700 hover:border-mate-400 hover:bg-mate-50'
             }`}
           >
-            <span className="text-2xl">{cat.emoji}</span>
-            <span className="text-xs font-semibold">{cat.label}</span>
+            <span className="text-sm font-semibold">{cat.label}</span>
           </button>
         ))}
       </div>

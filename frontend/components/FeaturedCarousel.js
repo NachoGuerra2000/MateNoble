@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function FeaturedCarousel({ products }) {
   const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [isPortrait, setIsPortrait] = useState(false);
   const count = products.length;
 
   const goTo = useCallback((i) => setIndex(((i % count) + count) % count), [count]);
@@ -14,10 +14,10 @@ export default function FeaturedCarousel({ products }) {
   const prev = useCallback(() => goTo(index - 1), [index, goTo]);
 
   useEffect(() => {
-    if (count <= 1 || paused) return;
+    if (count <= 1) return;
     const timer = setInterval(() => setIndex((i) => (i + 1) % count), 4500);
     return () => clearInterval(timer);
-  }, [count, paused]);
+  }, [count]);
 
   if (!count) return null;
   const product = products[index];
@@ -32,22 +32,27 @@ export default function FeaturedCarousel({ products }) {
         </Link>
       </div>
 
-      <div
-        className="bg-white/10 border border-white/20 rounded-3xl overflow-hidden"
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
-      >
-        <div className="relative h-72 sm:h-96 bg-mate-700/30">
-          <Link href={href} className="absolute inset-0 block group">
-            <Image
-              key={product._id}
-              src={product.images?.[0] || product.image}
-              alt={product.name}
-              fill
-              className="object-contain p-8 group-hover:scale-105 transition-transform duration-500"
-              sizes="(max-width: 1024px) 100vw, 550px"
-              priority
-            />
+      <div className="bg-white/10 border border-white/20 rounded-3xl overflow-hidden">
+        <div
+          className={`relative mx-auto bg-mate-700/30 transition-[max-width] duration-300 ${
+            isPortrait ? 'h-96 sm:h-[30rem] max-w-[280px] sm:max-w-[320px]' : 'h-72 sm:h-96 max-w-full'
+          }`}
+        >
+          <Link href={href} className="absolute inset-0 block group overflow-hidden">
+            <div key={product._id} className="featured-slide absolute inset-0">
+              <Image
+                src={product.images?.[0] || product.image}
+                alt={product.name}
+                fill
+                className="object-contain p-6 sm:p-8 group-hover:scale-105 transition-transform duration-500"
+                sizes="(max-width: 1024px) 100vw, 550px"
+                priority
+                onLoad={(e) => {
+                  const { naturalWidth, naturalHeight } = e.target;
+                  if (naturalWidth && naturalHeight) setIsPortrait(naturalHeight > naturalWidth * 1.05);
+                }}
+              />
+            </div>
           </Link>
 
           {count > 1 && (
@@ -88,6 +93,22 @@ export default function FeaturedCarousel({ products }) {
           ))}
         </div>
       )}
+
+      <style jsx>{`
+        .featured-slide {
+          animation: featuredFade 0.5s ease;
+        }
+        @keyframes featuredFade {
+          from {
+            opacity: 0;
+            transform: scale(1.04);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+      `}</style>
     </div>
   );
 }
