@@ -11,7 +11,7 @@ const productSchema = new mongoose.Schema(
     category: {
       type: String,
       required: true,
-      enum: ['calabaza', 'algarrobo', 'acero', 'materas', 'bolsos', 'otros'],
+      enum: ['calabaza', 'algarrobo', 'acero', 'materas', 'bolsos', 'bombillas', 'bombillones', 'otros'],
     },
     stock: { type: Number, required: true, min: 0, default: 0 },
     featured: { type: Boolean, default: false },

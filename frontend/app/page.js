@@ -9,6 +9,8 @@ const CATEGORIES = [
   { slug: 'acero', label: 'Acero', desc: 'Resistente y moderno' },
   { slug: 'materas', label: 'Materas', desc: 'Para llevar tu set a todos lados' },
   { slug: 'bolsos', label: 'Bolsos', desc: 'Diseño y funcionalidad' },
+  { slug: 'bombillas', label: 'Bombillas', desc: 'Para cada tipo de mate' },
+  { slug: 'bombillones', label: 'Bombillones', desc: 'Ideales para tereré' },
   { slug: 'otros', label: 'Otros', desc: 'Nuevas propuestas' },
 ];
 
@@ -86,7 +88,7 @@ export default async function HomePage() {
             <h2 className="text-3xl font-bold text-white">Explorar por categoría</h2>
             <p className="text-mate-200 mt-2">Encontrá el mate ideal para vos</p>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {CATEGORIES.map((cat) => (
               <Link
                 key={cat.slug}

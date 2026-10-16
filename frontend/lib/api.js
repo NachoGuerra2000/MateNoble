@@ -70,6 +70,13 @@ export const productsAPI = {
       headers: buildHeaders(token),
       body: JSON.stringify(data),
     }).then(handleResponse),
+
+  bulkRestock: (items, token) =>
+    fetch(`${API_URL}/products/bulk-restock`, {
+      method: 'POST',
+      headers: buildHeaders(token),
+      body: JSON.stringify({ items }),
+    }).then(handleResponse),
 };
 
 export const transactionsAPI = {
@@ -87,5 +94,30 @@ export const transactionsAPI = {
     fetch(`${API_URL}/transactions/${id}`, {
       method: 'DELETE',
       headers: buildHeaders(token),
+    }).then(handleResponse),
+
+  getManualItems: (token) =>
+    fetch(`${API_URL}/transactions/items`, {
+      headers: buildHeaders(token),
+    }).then(handleResponse),
+
+  deleteManualItem: (id, token) =>
+    fetch(`${API_URL}/transactions/items/${id}`, {
+      method: 'DELETE',
+      headers: buildHeaders(token),
+    }).then(handleResponse),
+
+  purchase: (data, token) =>
+    fetch(`${API_URL}/transactions/purchase`, {
+      method: 'POST',
+      headers: buildHeaders(token),
+      body: JSON.stringify(data),
+    }).then(handleResponse),
+
+  sale: (data, token) =>
+    fetch(`${API_URL}/transactions/sale`, {
+      method: 'POST',
+      headers: buildHeaders(token),
+      body: JSON.stringify(data),
     }).then(handleResponse),
 };

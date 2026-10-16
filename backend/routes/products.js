@@ -127,6 +127,55 @@ router.post('/:id/restock', auth, async (req, res) => {
   }
 });
 
+// POST /api/products/bulk-restock — solo admin: carga de stock por compra mayorista (varios productos a la vez)
+router.post('/bulk-restock', auth, async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: 'No hay productos para cargar' });
+    }
+
+    const toApply = [];
+    for (const item of items) {
+      const qty = Number(item.quantity);
+      if (!item.productId || !qty || qty <= 0) {
+        return res.status(400).json({ message: 'Cada producto necesita una cantidad válida' });
+      }
+      const product = await Product.findById(item.productId);
+      if (!product) {
+        return res.status(404).json({ message: `Producto no encontrado (${item.productId})` });
+      }
+      const unitCost = item.costPrice !== undefined && item.costPrice !== ''
+        ? Number(item.costPrice)
+        : product.costPrice;
+      toApply.push({ product, qty, unitCost });
+    }
+
+    const updatedProducts = [];
+    for (const { product, qty, unitCost } of toApply) {
+      product.stock += qty;
+      product.costPrice = unitCost;
+      product.active = true;
+      await product.save();
+
+      await Transaction.create({
+        type: 'compra',
+        product: product._id,
+        productName: product.name,
+        quantity: qty,
+        unitPrice: unitCost,
+        total: qty * unitCost,
+      });
+
+      updatedProducts.push(product);
+    }
+
+    res.json({ products: updatedProducts });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
 // DELETE /api/products/:id — solo admin
 router.delete('/:id', auth, async (req, res) => {
   try {

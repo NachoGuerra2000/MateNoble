@@ -4,12 +4,14 @@ const transactionSchema = new mongoose.Schema(
   {
     type: { type: String, enum: ['compra', 'venta'], required: true },
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null },
+    manualItem: { type: mongoose.Schema.Types.ObjectId, ref: 'ManualItem', default: null },
     productName: { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },
     unitPrice: { type: Number, required: true, min: 0 },
     unitCost: { type: Number, default: 0, min: 0 },
     total: { type: Number, required: true },
     orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null },
+    manual: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

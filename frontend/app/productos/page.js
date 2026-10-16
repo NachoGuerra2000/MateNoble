@@ -12,6 +12,8 @@ const CATEGORIES = [
   { slug: 'acero', label: 'Acero' },
   { slug: 'materas', label: 'Materas' },
   { slug: 'bolsos', label: 'Bolsos' },
+  { slug: 'bombillas', label: 'Bombillas' },
+  { slug: 'bombillones', label: 'Bombillones' },
   { slug: 'otros', label: 'Otros' },
 ];
 
@@ -54,7 +56,7 @@ export default function ProductosPage() {
       </div>
 
       {/* Categorías visuales */}
-      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-8">
+      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3 mb-8">
         {CATEGORIES.map((cat) => (
           <button
             key={cat.slug}

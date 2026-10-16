@@ -12,6 +12,10 @@ const CATEGORY_LABELS = {
   calabaza: 'Calabaza',
   algarrobo: 'Algarrobo',
   acero: 'Acero',
+  materas: 'Materas',
+  bolsos: 'Bolsos',
+  bombillas: 'Bombillas',
+  bombillones: 'Bombillones',
   otros: 'Otros',
 };
 
