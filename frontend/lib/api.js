@@ -101,6 +101,13 @@ export const transactionsAPI = {
       headers: buildHeaders(token),
     }).then(handleResponse),
 
+  updateManualItem: (id, data, token) =>
+    fetch(`${API_URL}/transactions/items/${id}`, {
+      method: 'PUT',
+      headers: buildHeaders(token),
+      body: JSON.stringify(data),
+    }).then(handleResponse),
+
   deleteManualItem: (id, token) =>
     fetch(`${API_URL}/transactions/items/${id}`, {
       method: 'DELETE',

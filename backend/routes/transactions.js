@@ -76,6 +76,23 @@ router.get('/items', auth, async (req, res) => {
   }
 });
 
+// PUT /api/transactions/items/:id — solo admin: editar nombre, costo o precio de un producto manual
+router.put('/items/:id', auth, async (req, res) => {
+  try {
+    const { name, costPrice, price } = req.body;
+    const update = {};
+    if (name !== undefined) update.name = String(name).trim();
+    if (costPrice !== undefined && costPrice !== '') update.costPrice = Number(costPrice);
+    if (price !== undefined && price !== '') update.price = Number(price);
+
+    const item = await ManualItem.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
+    if (!item) return res.status(404).json({ message: 'Producto no encontrado' });
+    res.json(item);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
 // DELETE /api/transactions/items/:id — solo admin: borra el producto manual (sus movimientos quedan en el historial)
 router.delete('/items/:id', auth, async (req, res) => {
   try {

@@ -61,6 +61,8 @@ export default function AdminDashboard() {
   const [saleForm, setSaleForm] = useState(null); // { target, quantity, unitPrice }
   const [saleSaving, setSaleSaving] = useState(false);
   const [deleteManualItem, setDeleteManualItem] = useState(null);
+  const [editItemForm, setEditItemForm] = useState(null); // { target, name, costPrice, price }
+  const [editItemSaving, setEditItemSaving] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) router.replace('/acceso/login');
@@ -225,6 +227,39 @@ export default function AdminDashboard() {
       if (!handleAuthError(err)) toast.error(err.message || 'Error al registrar la venta');
     } finally {
       setSaleSaving(false);
+    }
+  };
+
+  const openEditItem = (target) => {
+    setEditItemForm({ target, name: target.name, costPrice: String(target.costPrice), price: String(target.price) });
+  };
+
+  const handleEditItemSubmit = async (e) => {
+    e.preventDefault();
+    if (!editItemForm.name.trim() || editItemForm.costPrice === '' || editItemForm.price === '') {
+      toast.error('Completá nombre, costo y precio de venta');
+      return;
+    }
+    const data = {
+      name: editItemForm.name.trim(),
+      costPrice: Number(editItemForm.costPrice),
+      price: Number(editItemForm.price),
+    };
+    setEditItemSaving(true);
+    try {
+      if (editItemForm.target.isStore) {
+        await productsAPI.update(editItemForm.target.id, data, token);
+      } else {
+        await transactionsAPI.updateManualItem(editItemForm.target.id, data, token);
+      }
+      toast.success('Producto actualizado');
+      setEditItemForm(null);
+      loadFinance();
+      loadProducts();
+    } catch (err) {
+      if (!handleAuthError(err)) toast.error(err.message || 'Error al guardar');
+    } finally {
+      setEditItemSaving(false);
     }
   };
 
@@ -716,6 +751,13 @@ export default function AdminDashboard() {
                                 title="Cargar stock"
                               >
                                 <PackagePlus className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => openEditItem(i)}
+                                className="p-1.5 text-mate-500 hover:text-mate-800 hover:bg-mate-100 rounded-lg transition-colors"
+                                title="Editar precios"
+                              >
+                                <Pencil className="w-4 h-4" />
                               </button>
                               {!i.isStore && (
                                 <button
@@ -1322,6 +1364,79 @@ export default function AdminDashboard() {
                     className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors disabled:opacity-60"
                   >
                     {saleSaving ? 'Guardando...' : 'Vender'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Edit inventory item modal */}
+      {editItemForm && (() => {
+        const margin = (Number(editItemForm.price) || 0) - (Number(editItemForm.costPrice) || 0);
+        return (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-lg font-bold text-mate-900">Editar producto</h3>
+                <button onClick={() => setEditItemForm(null)} className="text-mate-400 hover:text-mate-700">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleEditItemSubmit} className="space-y-4">
+                <Field label="Nombre *">
+                  <input
+                    type="text"
+                    value={editItemForm.name}
+                    onChange={(e) => setEditItemForm({ ...editItemForm, name: e.target.value })}
+                    className="input-base"
+                  />
+                </Field>
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="Me salió c/u (ARS) *">
+                    <input
+                      type="number"
+                      min="0"
+                      autoFocus
+                      value={editItemForm.costPrice}
+                      onChange={(e) => setEditItemForm({ ...editItemForm, costPrice: e.target.value })}
+                      className="input-base"
+                    />
+                  </Field>
+                  <Field label="Lo vendo a (ARS) *">
+                    <input
+                      type="number"
+                      min="0"
+                      value={editItemForm.price}
+                      onChange={(e) => setEditItemForm({ ...editItemForm, price: e.target.value })}
+                      className="input-base"
+                    />
+                  </Field>
+                </div>
+                <p className="text-sm text-mate-600">
+                  Ganás por unidad: <span className={`font-semibold ${margin >= 0 ? 'text-green-600' : 'text-red-500'}`}>${margin.toLocaleString('es-AR')}</span>
+                </p>
+                <p className="text-xs text-mate-400 -mt-2">
+                  {editItemForm.target.isStore ? 'Es un producto de la tienda: los cambios también se ven en la página. ' : ''}
+                  Las compras y ventas ya registradas no cambian.
+                </p>
+
+                <div className="flex gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setEditItemForm(null)}
+                    className="flex-1 border border-mate-200 text-mate-700 py-3 rounded-xl font-medium hover:bg-mate-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={editItemSaving}
+                    className="flex-1 bg-mate-800 text-white py-3 rounded-xl font-semibold hover:bg-mate-700 transition-colors disabled:opacity-60"
+                  >
+                    {editItemSaving ? 'Guardando...' : 'Guardar'}
                   </button>
                 </div>
               </form>
