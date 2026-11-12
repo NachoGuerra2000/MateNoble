@@ -7,7 +7,20 @@ const buildHeaders = (token) => {
 };
 
 const handleResponse = async (res) => {
-  const data = await res.json();
+  // Si el servidor responde HTML (ruta inexistente, backend caído o desactualizado) mostramos un mensaje claro
+  const text = await res.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    const err = new Error(
+      res.status === 404
+        ? 'El servidor no reconoce esta acción: puede que el backend no esté actualizado'
+        : `Error del servidor (${res.status})`
+    );
+    err.status = res.status;
+    throw err;
+  }
   if (!res.ok) {
     const err = new Error(data.message || 'Error en la solicitud');
     err.status = res.status;

@@ -1,5 +1,6 @@
 'use client';
-import { createContext, useContext, useReducer, useEffect, useState } from 'react';
+import { createContext, useContext, useReducer, useEffect, useState, useCallback } from 'react';
+import { productsAPI } from '@/lib/api';
 
 const CartContext = createContext(null);
 
@@ -25,6 +26,16 @@ const cartReducer = (state, action) => {
           ? { ...i, quantity: Math.min(action.quantity, i.stock) }
           : i
       );
+    case 'SYNC': {
+      // Actualiza precio y stock con los datos actuales; saca lo que ya no está disponible
+      return state
+        .map((i) => {
+          const fresh = action.products[i._id];
+          if (!fresh || !fresh.active || fresh.stock <= 0) return null;
+          return { ...i, ...fresh, quantity: Math.min(i.quantity, fresh.stock) };
+        })
+        .filter(Boolean);
+    }
     case 'CLEAR':
       return [];
     case 'LOAD':
@@ -39,13 +50,36 @@ export function CartProvider({ children }) {
   const [isOpen, setIsOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
+  // Trae precio y stock actuales de cada producto del carrito (el carrito guardado puede tener precios viejos)
+  const syncCart = useCallback(async (items) => {
+    if (!items?.length) return { changed: false };
+    const products = {};
+    await Promise.all(
+      items.map(async (i) => {
+        try {
+          products[i._id] = await productsAPI.getById(i._id);
+        } catch (err) {
+          if (err.status !== 404) products[i._id] = { ...i, active: true }; // sin conexión: dejarlo como está
+        }
+      })
+    );
+    const changed = items.some((i) => {
+      const fresh = products[i._id];
+      return !fresh || !fresh.active || fresh.price !== i.price || fresh.stock < i.quantity;
+    });
+    dispatch({ type: 'SYNC', products });
+    return { changed };
+  }, []);
+
   useEffect(() => {
+    let saved = [];
     try {
-      const saved = localStorage.getItem('mate-cart');
-      if (saved) dispatch({ type: 'LOAD', items: JSON.parse(saved) });
+      saved = JSON.parse(localStorage.getItem('mate-cart') || '[]');
+      if (saved.length) dispatch({ type: 'LOAD', items: saved });
     } catch {}
     setHydrated(true);
-  }, []);
+    syncCart(saved);
+  }, [syncCart]);
 
   useEffect(() => {
     if (hydrated) localStorage.setItem('mate-cart', JSON.stringify(cartItems));
@@ -67,6 +101,7 @@ export function CartProvider({ children }) {
         removeFromCart,
         updateQuantity,
         clearCart,
+        syncCart,
         total,
         itemCount,
         isOpen,

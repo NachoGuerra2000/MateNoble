@@ -99,41 +99,104 @@ const sendWhatsApp = async (order) => {
   );
 };
 
-// Crear orden, enviar email y WhatsApp
+// Devuelve el stock reservado si algo falla a mitad del pedido
+const releaseStock = (reserved) =>
+  Promise.all(
+    reserved.map(({ product, quantity }) =>
+      Product.updateOne({ _id: product._id }, { $inc: { stock: quantity } })
+    )
+  ).catch((err) => console.error('Error al devolver stock:', err));
+
+// Crear orden, enviar email y WhatsApp.
+// El precio y el subtotal se calculan acá con los datos de la base: nunca se confía en lo que manda el navegador.
 router.post('/', async (req, res) => {
+  const reserved = [];
   try {
-    const { customer, items, subtotal } = req.body;
-    if (!customer || !items || !subtotal)
+    const { customer, items } = req.body;
+    if (!customer || !Array.isArray(items) || items.length === 0)
       return res.status(400).json({ message: 'Datos incompletos' });
 
+    // Juntar líneas repetidas del mismo producto
+    const quantities = new Map();
+    for (const item of items) {
+      const qty = Number(item.quantity);
+      if (!item.productId || !Number.isInteger(qty) || qty <= 0)
+        return res.status(400).json({ message: 'Hay un producto con cantidad inválida' });
+      const sentPrice = Number(item.price);
+      const prev = quantities.get(String(item.productId));
+      quantities.set(String(item.productId), {
+        quantity: (prev?.quantity || 0) + qty,
+        sentPrice: Number.isNaN(sentPrice) ? null : sentPrice,
+      });
+    }
+
+    // Validar productos y precios antes de tocar el stock
+    const lines = [];
+    for (const [productId, { quantity, sentPrice }] of quantities) {
+      const product = await Product.findById(productId).catch(() => null);
+      if (!product || !product.active)
+        return res.status(409).json({ message: 'Uno de los productos ya no está disponible. Revisá tu carrito.' });
+      if (sentPrice !== null && sentPrice !== product.price)
+        return res.status(409).json({
+          code: 'PRICE_CHANGED',
+          message: `El precio de "${product.name}" cambió (ahora $${product.price.toLocaleString('es-AR')}). Revisá tu carrito antes de pagar.`,
+        });
+      lines.push({ product, quantity });
+    }
+
+    // Reservar stock de forma atómica: si dos personas compran el último mate a la vez, solo uno lo consigue
+    for (const line of lines) {
+      const updated = await Product.findOneAndUpdate(
+        { _id: line.product._id, stock: { $gte: line.quantity } },
+        { $inc: { stock: -line.quantity } },
+        { new: true }
+      );
+      if (!updated) {
+        await releaseStock(reserved);
+        const current = await Product.findById(line.product._id);
+        return res.status(409).json({
+          code: 'OUT_OF_STOCK',
+          message: `No hay stock suficiente de "${line.product.name}" (quedan ${current?.stock ?? 0}). Revisá tu carrito.`,
+        });
+      }
+      reserved.push(line);
+    }
+
+    const orderItems = lines.map(({ product, quantity }) => ({
+      productId: String(product._id),
+      name: product.name,
+      price: product.price,
+      quantity,
+    }));
+    const subtotal = orderItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
     const shipping = customer.zone === 'san_miguel' ? SHIPPING_COST : 0;
     const total = subtotal + shipping;
 
-    const order = new Order({ customer, items, subtotal, shipping, total, comprobante: req.body.comprobante || null, paymentMethod: req.body.paymentMethod || 'transferencia' });
+    const order = new Order({
+      customer,
+      items: orderItems,
+      subtotal,
+      shipping,
+      total,
+      comprobante: req.body.comprobante || null,
+      paymentMethod: req.body.paymentMethod === 'efectivo' ? 'efectivo' : 'transferencia',
+    });
     await order.save();
+    reserved.length = 0; // el pedido ya existe: el stock queda descontado
 
-    // Descontar stock y registrar la venta de cada producto, sin bloquear la respuesta
-    Promise.all(
-      items.map(async (item) => {
-        if (!item.productId) return;
-        const product = await Product.findById(item.productId);
-        if (!product) return;
-
-        product.stock = Math.max(0, product.stock - item.quantity);
-        await product.save();
-
-        await Transaction.create({
-          type: 'venta',
-          product: product._id,
-          productName: item.name,
-          quantity: item.quantity,
-          unitPrice: item.price,
-          unitCost: product.costPrice,
-          total: item.price * item.quantity,
-          orderId: order._id,
-        });
-      })
-    ).catch((err) => console.error('Error al actualizar stock/transacciones:', err));
+    // Registrar la venta de cada producto en Finanzas
+    await Transaction.insertMany(
+      lines.map(({ product, quantity }) => ({
+        type: 'venta',
+        product: product._id,
+        productName: product.name,
+        quantity,
+        unitPrice: product.price,
+        unitCost: product.costPrice,
+        total: product.price * quantity,
+        orderId: order._id,
+      }))
+    );
 
     // Notificaciones en paralelo, sin bloquear la respuesta
     Promise.all([
@@ -141,8 +204,9 @@ router.post('/', async (req, res) => {
       sendWhatsApp(order).catch((err) => console.error('Error WhatsApp:', err)),
     ]);
 
-    res.status(201).json({ orderId: order._id, shipping, total });
+    res.status(201).json({ orderId: order._id, subtotal, shipping, total });
   } catch (err) {
+    await releaseStock(reserved);
     res.status(500).json({ message: err.message });
   }
 });

@@ -11,7 +11,7 @@ const MP_ALIAS = 'mates.nobles';
 
 export default function PagoPage() {
   const router = useRouter();
-  const { clearCart } = useCart();
+  const { clearCart, syncCart, cartItems } = useCart();
   const [checkoutData, setCheckoutData] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('transferencia');
   const [copied, setCopied] = useState(false);
@@ -69,12 +69,20 @@ export default function PagoPage() {
           items: checkoutData.items.map((i) => ({
             productId: i._id, name: i.name, price: i.price, quantity: i.quantity,
           })),
-          subtotal: checkoutData.subtotal,
+          subtotal: checkoutData.subtotal, // el servidor lo recalcula; se manda por compatibilidad con backends viejos
           comprobante: comprobante || null,
           paymentMethod,
         }),
       });
       const data = await res.json();
+      if (res.status === 409) {
+        // Cambió un precio o se agotó algo: actualizamos el carrito y volvemos al resumen antes de que pague de más o de menos
+        await syncCart(cartItems);
+        localStorage.removeItem('checkout');
+        toast.error(data.message, { duration: 6000 });
+        router.push('/checkout');
+        return;
+      }
       if (!res.ok) throw new Error(data.message);
       clearCart();
       localStorage.removeItem('checkout');
