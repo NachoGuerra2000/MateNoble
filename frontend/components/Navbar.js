@@ -10,14 +10,14 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 bg-mate-800 shadow-md">
+    <header className="sticky top-0 z-40 bg-mate-700 border-b border-mate-600/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center gap-2.5 text-white hover:opacity-90 transition-opacity">
             <div className="relative w-9 h-9 rounded-full overflow-hidden bg-mate-600 flex-shrink-0">
               <Image src="/logo.jpg" alt="Mate Noble" fill className="object-cover" sizes="36px" />
             </div>
-            <span className="text-xl font-bold tracking-tight">Mate Noble</span>
+            <span className="font-serif text-2xl font-semibold">Mate Noble</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-6">
@@ -37,7 +37,7 @@ export default function Navbar() {
             >
               <ShoppingCart className="w-6 h-6" />
               {itemCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-mate-400 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-mate-50 text-mate-800 text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
                   {itemCount > 9 ? '9+' : itemCount}
                 </span>
               )}

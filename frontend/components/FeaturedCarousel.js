@@ -26,9 +26,9 @@ export default function FeaturedCarousel({ products }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <p className="text-mate-200 font-semibold text-sm uppercase tracking-wide">Destacados</p>
+        <p className="text-mate-200 font-semibold">Destacados</p>
         <Link href="/productos" className="text-mate-300 hover:text-white text-sm transition-colors">
-          Ver todos →
+          Ver todos
         </Link>
       </div>
 

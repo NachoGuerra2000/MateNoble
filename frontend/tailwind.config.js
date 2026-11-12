@@ -4,18 +4,24 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Verde oliva del logo (#474d33 = mate-700) y crema de sus líneas (mate-50)
         mate: {
-          50:  '#f0faf2',
-          100: '#d8f3dc',
-          200: '#ace5b5',
-          300: '#74cf86',
-          400: '#40b356',
-          500: '#2d9142',
-          600: '#237535',
-          700: '#1c5c2a',
-          800: '#164721',
-          900: '#0e2e15',
+          50:  '#f8f8f1',
+          100: '#eeefe2',
+          200: '#dadcc6',
+          300: '#bcc09c',
+          400: '#959b70',
+          500: '#727a4e',
+          600: '#5b623e',
+          700: '#474d33',
+          800: '#393e29',
+          900: '#26291b',
         },
+        whatsapp: '#1f9d4f',
+      },
+      fontFamily: {
+        sans: ['var(--font-sans)', 'Segoe UI', 'system-ui', 'sans-serif'],
+        serif: ['var(--font-serif)', 'Georgia', 'serif'],
       },
     },
   },

@@ -1,15 +1,20 @@
 import Link from 'next/link';
-import { Leaf, Instagram, Phone } from 'lucide-react';
+import Image from 'next/image';
+import { Instagram } from 'lucide-react';
+import { WhatsAppIcon } from './WhatsAppButton';
+import { waLink, WHATSAPP_DISPLAY } from '@/lib/whatsapp';
 
 export default function Footer() {
   return (
-    <footer className="bg-mate-900 text-mate-200 mt-20">
+    <footer className="bg-mate-900 text-mate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <Leaf className="w-5 h-5 text-mate-400" />
-              <span className="text-lg font-bold text-white">Mate Noble</span>
+              <span className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                <Image src="/logo.jpg" alt="" fill className="object-cover" sizes="40px" />
+              </span>
+              <span className="font-serif text-2xl font-semibold text-white">Mate Noble</span>
             </div>
             <p className="text-sm text-mate-300 leading-relaxed">
               Artesanía y tradición en cada mate. Piezas únicas hechas con amor y dedicación.
@@ -30,11 +35,13 @@ export default function Footer() {
             <h3 className="text-white font-semibold mb-3">Contacto</h3>
             <ul className="space-y-3 text-sm text-mate-300">
               <li className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-mate-400" />
-                <span>3812129848</span>
+                <WhatsAppIcon className="w-4 h-4 text-mate-300" />
+                <a href={waLink()} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+                  {WHATSAPP_DISPLAY}
+                </a>
               </li>
               <li className="flex items-center gap-2">
-                <Instagram className="w-4 h-4 text-mate-400" />
+                <Instagram className="w-4 h-4 text-mate-300" />
                 <a
                   href="https://instagram.com/matenoble.tuc"
                   target="_blank"
@@ -49,7 +56,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-mate-700 mt-10 pt-6 flex items-center justify-center text-xs text-mate-500">
+        <div className="border-t border-mate-700 mt-10 pt-6 flex items-center justify-center text-xs text-mate-300">
           <span>© {new Date().getFullYear()} Mate Noble. Todos los derechos reservados.</span>
         </div>
       </div>

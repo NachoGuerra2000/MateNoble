@@ -23,7 +23,7 @@ const whatsappLink = (contact) => {
   return digits ? `https://wa.me/549${digits}` : null;
 };
 
-const GREEN = [22, 71, 33];
+const GREEN = [71, 77, 51]; // verde oliva del logo
 const DARK = [30, 41, 35];
 const GRAY = [110, 120, 112];
 const money = (n) => `$${Math.round(Number(n) || 0).toLocaleString('es-AR')}`;
@@ -92,7 +92,7 @@ const buildPdf = async (products, config) => {
   };
 
   const drawFooter = (page, total) => {
-    doc.setDrawColor(220, 230, 222);
+    doc.setDrawColor(218, 220, 198);
     doc.line(M, H - 24, W - M, H - 24);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
@@ -134,7 +134,7 @@ const buildPdf = async (products, config) => {
     }
     const x = M + col * (cardW + gap);
 
-    doc.setFillColor(244, 249, 245);
+    doc.setFillColor(248, 248, 241);
     doc.roundedRect(x, y, cardW, cardH, 3, 3, 'F');
     const img = images[i];
     if (img) {

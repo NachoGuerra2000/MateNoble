@@ -25,7 +25,8 @@ router.get('/', async (req, res) => {
     const filter = { active: true };
     if (category) filter.category = category;
     if (featured === 'true') filter.featured = true;
-    if (includeOutOfStock !== 'true') filter.stock = { $gt: 0 };
+    // Sin stock se ocultan, salvo los que se venden por encargo
+    if (includeOutOfStock !== 'true') filter.$or = [{ stock: { $gt: 0 } }, { madeToOrder: true }];
 
     const products = await Product.find(filter).select(PUBLIC_FIELDS).sort({ createdAt: -1 });
     res.json(products);

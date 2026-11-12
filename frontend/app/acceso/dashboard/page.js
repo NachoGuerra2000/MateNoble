@@ -39,7 +39,7 @@ const CHANNEL_SHORT = {
 
 const EMPTY_FORM = {
   name: '', price: '', costPrice: '', wholesalePrice: '', image: '', images: [], description: '',
-  category: 'calabaza', stock: '', featured: false, active: true,
+  category: 'calabaza', stock: '', featured: false, active: true, madeToOrder: false,
 };
 
 export default function AdminDashboard() {
@@ -422,6 +422,7 @@ export default function AdminDashboard() {
       category: product.category,
       stock: product.stock,
       featured: product.featured,
+      madeToOrder: !!product.madeToOrder,
       active: product.active,
     });
     setModalOpen(true);
@@ -1247,6 +1248,18 @@ export default function AdminDashboard() {
                   <span className="text-sm text-mate-700 font-medium">Activo (visible)</span>
                 </label>
               </div>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.madeToOrder}
+                  onChange={(e) => setForm({ ...form, madeToOrder: e.target.checked })}
+                  className="w-4 h-4 mt-0.5 accent-mate-700"
+                />
+                <span className="text-sm text-mate-700">
+                  <span className="font-medium">Se vende por encargo</span>
+                  <span className="block text-xs text-mate-400">Cuando no hay stock, se sigue mostrando en la tienda con el botón &quot;Encargar por WhatsApp&quot;.</span>
+                </span>
+              </label>
 
               <div className="flex gap-3 pt-2">
                 <button

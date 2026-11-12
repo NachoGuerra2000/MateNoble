@@ -7,8 +7,13 @@
     scroll-behavior: smooth;
   }
   body {
-    @apply bg-mate-50 text-mate-900;
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    @apply bg-mate-50 text-mate-900 font-sans;
+  }
+  /* Títulos grandes con la serif del logo */
+  h1, h2 {
+    @apply font-serif;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
   }
 }
 
@@ -25,4 +30,10 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+}
+
+/* Filas deslizables sin barra de desplazamiento visible */
+@layer utilities {
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
 }

@@ -24,6 +24,13 @@ export default function ProductosPage() {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState(searchParams.get('categoria') || '');
   const [showOutOfStock, setShowOutOfStock] = useState(false);
+  const [available, setAvailable] = useState(null); // categorías que tienen productos
+
+  useEffect(() => {
+    productsAPI.getAll({ includeOutOfStock: 'true' })
+      .then((all) => setAvailable(new Set(all.map((p) => p.category))))
+      .catch(() => setAvailable(null));
+  }, []);
 
   useEffect(() => {
     setActiveCategory(searchParams.get('categoria') || '');
@@ -50,22 +57,22 @@ export default function ProductosPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-mate-900">Nuestros Productos</h1>
+        <h1 className="text-4xl font-semibold text-mate-900">Nuestros productos</h1>
         <p className="text-mate-600 mt-1">
           {products.length} {products.length === 1 ? 'producto' : 'productos'} encontrados
         </p>
       </div>
 
       {/* Categorías visuales */}
-      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3 mb-8">
-        {CATEGORIES.map((cat) => (
+      <div className="no-scrollbar flex gap-2 overflow-x-auto pb-2 mb-6 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
+        {CATEGORIES.filter((cat) => !cat.slug || !available || available.has(cat.slug) || activeCategory === cat.slug).map((cat) => (
           <button
             key={cat.slug}
             onClick={() => setActiveCategory(cat.slug)}
-            className={`flex items-center justify-center py-4 px-2 rounded-2xl border-2 transition-all duration-200 ${
+            className={`flex-shrink-0 px-5 py-2.5 rounded-full border transition-colors duration-200 ${
               activeCategory === cat.slug
-                ? 'bg-mate-800 border-mate-800 text-white shadow-md'
-                : 'bg-white border-mate-200 text-mate-700 hover:border-mate-400 hover:bg-mate-50'
+                ? 'bg-mate-700 border-mate-700 text-white'
+                : 'bg-white border-mate-200 text-mate-700 hover:border-mate-400'
             }`}
           >
             <span className="text-sm font-semibold">{cat.label}</span>
@@ -107,7 +114,6 @@ export default function ProductosPage() {
         </div>
       ) : products.length === 0 ? (
         <div className="text-center py-24 text-mate-500">
-          <div className="text-6xl mb-4">🍵</div>
           <p className="text-xl font-medium text-mate-700">No hay productos en esta categoría</p>
           <p className="text-sm mt-2">Probá con otra categoría o activá "Mostrar sin stock"</p>
           <button

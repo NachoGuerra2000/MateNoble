@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { ShoppingCart, Package } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import toast from 'react-hot-toast';
+import { WhatsAppIcon } from './WhatsAppButton';
+import { waLink } from '@/lib/whatsapp';
 
 const CATEGORY_LABELS = {
   calabaza: 'Calabaza',
@@ -19,8 +21,15 @@ const CATEGORY_LABELS = {
 
 export default function ProductCard({ product }) {
   const { addToCart, openCart } = useCart();
-  const outOfStock = product.stock === 0;
+  // Por encargo: no hay stock pero se puede pedir por WhatsApp
+  const byOrder = product.stock === 0 && product.madeToOrder;
+  const outOfStock = product.stock === 0 && !byOrder;
   const originalPrice = Math.round(product.price * 1.15);
+
+  const handleOrder = (e) => {
+    e.preventDefault();
+    window.open(waLink(`¡Hola Mate Noble! Quiero encargar: ${product.name}`), '_blank', 'noopener');
+  };
 
   const handleAddToCart = (e) => {
     e.preventDefault();
@@ -51,6 +60,11 @@ export default function ProductCard({ product }) {
           <span className="absolute top-3 left-3 bg-mate-800/90 text-mate-100 text-xs font-medium px-2.5 py-1 rounded-full">
             {CATEGORY_LABELS[product.category] || product.category}
           </span>
+          {byOrder && (
+            <span className="absolute bottom-3 left-3 bg-amber-50 text-amber-800 text-xs font-semibold px-2.5 py-1 rounded-full">
+              Por encargo
+            </span>
+          )}
         </div>
 
         {/* Content */}
@@ -80,10 +94,20 @@ export default function ProductCard({ product }) {
             )}
             <div className="hidden sm:flex items-center gap-1 text-xs text-mate-500 mt-1">
               <Package className="w-3.5 h-3.5" />
-              <span>{product.stock} disponibles</span>
+              <span>{byOrder ? 'Se hace a pedido' : `${product.stock} disponibles`}</span>
             </div>
           </div>
 
+          {byOrder ? (
+            <button
+              onClick={handleOrder}
+              className="mt-2 sm:mt-3 w-full flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-2.5 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold bg-whatsapp text-white hover:brightness-110 active:scale-95 transition"
+            >
+              <WhatsAppIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="sm:hidden">Encargar</span>
+              <span className="hidden sm:inline">Encargar por WhatsApp</span>
+            </button>
+          ) : (
           <button
             onClick={handleAddToCart}
             disabled={outOfStock}
@@ -97,6 +121,7 @@ export default function ProductCard({ product }) {
             <span className="sm:hidden">{outOfStock ? 'Sin stock' : 'Agregar'}</span>
             <span className="hidden sm:inline">{outOfStock ? 'Sin stock' : 'Agregar al carrito'}</span>
           </button>
+          )}
         </div>
       </div>
     </Link>

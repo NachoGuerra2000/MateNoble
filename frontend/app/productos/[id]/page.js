@@ -7,6 +7,8 @@ import { ShoppingCart, Package, ArrowLeft, X, ZoomIn } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { productsAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
+import { WhatsAppIcon } from '@/components/WhatsAppButton';
+import { waLink } from '@/lib/whatsapp';
 
 const CATEGORY_LABELS = {
   calabaza: 'Calabaza',
@@ -68,7 +70,12 @@ export default function ProductDetailPage() {
     );
   }
 
-  const outOfStock = product.stock === 0;
+  const byOrder = product.stock === 0 && product.madeToOrder;
+  const outOfStock = product.stock === 0 && !byOrder;
+  const productUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const askText = byOrder
+    ? `¡Hola Mate Noble! Quiero encargar: ${product.name} ${productUrl}`
+    : `¡Hola Mate Noble! Tengo una consulta sobre: ${product.name} ${productUrl}`;
   const originalPrice = Math.round(product.price * 1.15);
   const allImages = product.images?.length ? product.images : [product.image];
   const mainImage = selectedImage || allImages[0];
@@ -137,7 +144,7 @@ export default function ProductDetailPage() {
               {CATEGORY_LABELS[product.category] || product.category}
             </span>
 
-            <h1 className="text-3xl font-bold text-mate-900 leading-tight">{product.name}</h1>
+            <h1 className="text-4xl font-semibold text-mate-900 leading-tight">{product.name}</h1>
 
             {/* Price */}
             <div className="mt-4 flex items-center gap-3 flex-wrap">
@@ -164,7 +171,7 @@ export default function ProductDetailPage() {
             <div className="flex items-center gap-2 mt-3">
               <Package className="w-4 h-4 text-mate-500" />
               <span className={`text-sm font-medium ${outOfStock ? 'text-red-500' : 'text-mate-600'}`}>
-                {outOfStock ? 'Sin stock disponible' : `${product.stock} unidades disponibles`}
+                {byOrder ? 'Por encargo: consultanos la demora por WhatsApp' : outOfStock ? 'Sin stock disponible' : `${product.stock} unidades disponibles`}
               </span>
             </div>
 
@@ -177,7 +184,7 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Quantity + Add to cart */}
-            {!outOfStock && (
+            {!outOfStock && !byOrder && (
               <div className="mt-8 space-y-3">
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-medium text-mate-700">Cantidad:</span>
@@ -209,6 +216,16 @@ export default function ProductDetailPage() {
                 </button>
               </div>
             )}
+
+            <a
+              href={waLink(askText)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`mt-3 w-full flex items-center justify-center gap-2 font-bold py-4 rounded-2xl transition ${byOrder ? 'bg-whatsapp text-white text-lg hover:brightness-110' : 'border-2 border-whatsapp text-whatsapp hover:bg-whatsapp/10'}`}
+            >
+              <WhatsAppIcon className="w-5 h-5" />
+              {byOrder ? 'Encargar por WhatsApp' : 'Consultar por WhatsApp'}
+            </a>
           </div>
         </div>
       </div>

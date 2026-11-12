@@ -17,6 +17,8 @@ const productSchema = new mongoose.Schema(
     },
     stock: { type: Number, required: true, min: 0, default: 0 },
     featured: { type: Boolean, default: false },
+    // Se muestra aunque no haya stock: se vende por encargo y se pide por WhatsApp
+    madeToOrder: { type: Boolean, default: false },
     active: { type: Boolean, default: true },
   },
   { timestamps: true }
