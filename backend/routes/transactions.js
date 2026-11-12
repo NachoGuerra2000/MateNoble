@@ -3,6 +3,9 @@ const Transaction = require('../models/Transaction');
 const Product = require('../models/Product');
 const ManualItem = require('../models/ManualItem');
 const auth = require('../middleware/authMiddleware');
+const { buildSummary } = require('../lib/finance');
+
+const MANUAL_CHANNELS = ['instagram', 'marketplace', 'whatsapp', 'boca_a_boca', 'otro'];
 
 const router = express.Router();
 
@@ -19,48 +22,7 @@ router.get('/', auth, async (req, res) => {
 // GET /api/transactions/summary — solo admin: totales de inversión y ganancia
 router.get('/summary', auth, async (req, res) => {
   try {
-    const transactions = await Transaction.find();
-
-    let totalInvested = 0;
-    let totalRevenue = 0;
-    let totalCost = 0;
-    const perProduct = {};
-
-    for (const t of transactions) {
-      const key = t.product ? String(t.product) : t.manualItem ? String(t.manualItem) : t.productName;
-      if (!perProduct[key]) {
-        perProduct[key] = {
-          productName: t.productName,
-          invested: 0,
-          unitsSold: 0,
-          revenue: 0,
-          cost: 0,
-        };
-      }
-
-      if (t.type === 'compra') {
-        totalInvested += t.total;
-        perProduct[key].invested += t.total;
-      } else {
-        totalRevenue += t.total;
-        totalCost += t.unitCost * t.quantity;
-        perProduct[key].unitsSold += t.quantity;
-        perProduct[key].revenue += t.total;
-        perProduct[key].cost += t.unitCost * t.quantity;
-      }
-    }
-
-    const products = Object.values(perProduct)
-      .map((p) => ({ ...p, profit: p.revenue - p.cost }))
-      .sort((a, b) => b.revenue - a.revenue);
-
-    res.json({
-      totalInvested,
-      totalRevenue,
-      totalCost,
-      totalProfit: totalRevenue - totalCost,
-      products,
-    });
+    res.json(await buildSummary());
   } catch {
     res.status(500).json({ message: 'Error al calcular el resumen' });
   }
@@ -168,9 +130,11 @@ router.post('/purchase', auth, async (req, res) => {
 // POST /api/transactions/sale — solo admin: registrar una venta hecha por fuera de la página
 router.post('/sale', auth, async (req, res) => {
   try {
-    const { productId, manualItemId, quantity, unitPrice } = req.body;
+    const { productId, manualItemId, quantity, unitPrice, channel } = req.body;
     const qty = Number(quantity);
     if (!qty || qty <= 0) return res.status(400).json({ message: 'Cantidad inválida' });
+    if (!MANUAL_CHANNELS.includes(channel))
+      return res.status(400).json({ message: 'Elegí por dónde vino la venta' });
 
     const target = await findTarget({ productId, manualItemId });
     if (!target) return res.status(404).json({ message: 'Producto no encontrado' });
@@ -195,6 +159,7 @@ router.post('/sale', auth, async (req, res) => {
       unitCost: doc.costPrice,
       total: qty * price,
       manual: true,
+      channel,
     });
 
     res.status(201).json({ item: doc, transaction });
@@ -208,6 +173,8 @@ router.delete('/:id', auth, async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
     if (!transaction) return res.status(404).json({ message: 'Movimiento no encontrado' });
+    if (transaction.encargo)
+      return res.status(400).json({ message: 'Esta venta es de un encargo: cambiá el estado del encargo desde la pestaña Encargos' });
 
     // Puede ser un producto de la tienda o uno cargado a mano desde Finanzas
     const item = transaction.product

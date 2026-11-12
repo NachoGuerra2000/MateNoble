@@ -5,13 +5,15 @@ const productSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     price: { type: Number, required: true, min: 0 },
     costPrice: { type: Number, required: true, min: 0, default: 0 },
+    // Precio por unidad para empresas, clubes y ventas grandes (0 = no sale en el catálogo para empresas)
+    wholesalePrice: { type: Number, min: 0, default: 0 },
     image: { type: String, required: true },
     images: { type: [String], default: [] },
     description: { type: String, required: true },
     category: {
       type: String,
       required: true,
-      enum: ['calabaza', 'algarrobo', 'acero', 'materas', 'bolsos', 'bombillas', 'bombillones', 'otros'],
+      enum: ['calabaza', 'algarrobo', 'acero', 'materas', 'bolsos', 'bombillas', 'bombillones', 'combos', 'otros'],
     },
     stock: { type: Number, required: true, min: 0, default: 0 },
     featured: { type: Boolean, default: false },

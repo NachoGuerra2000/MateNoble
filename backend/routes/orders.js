@@ -195,6 +195,7 @@ router.post('/', async (req, res) => {
         unitCost: product.costPrice,
         total: product.price * quantity,
         orderId: order._id,
+        channel: 'web',
       }))
     );
 

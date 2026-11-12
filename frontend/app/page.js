@@ -11,6 +11,7 @@ const CATEGORIES = [
   { slug: 'bolsos', label: 'Bolsos', desc: 'Diseño y funcionalidad' },
   { slug: 'bombillas', label: 'Bombillas', desc: 'Para cada tipo de mate' },
   { slug: 'bombillones', label: 'Bombillones', desc: 'Ideales para tereré' },
+  { slug: 'combos', label: 'Combos', desc: 'Listos para regalar' },
   { slug: 'otros', label: 'Otros', desc: 'Nuevas propuestas' },
 ];
 

@@ -6,11 +6,14 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [username, setUsername] = useState(null);
+  // true cuando ya se leyó la sesión guardada: evita mandar al login al recargar el panel
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const savedToken = localStorage.getItem('admin-token');
     const savedUser = localStorage.getItem('admin-username');
     if (savedToken) { setToken(savedToken); setUsername(savedUser); }
+    setReady(true);
   }, []);
 
   const login = (tkn, user) => {
@@ -28,7 +31,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ token, username, isAuthenticated: !!token, login, logout }}>
+    <AuthContext.Provider value={{ token, username, isAuthenticated: !!token, ready, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

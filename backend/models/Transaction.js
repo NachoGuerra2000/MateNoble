@@ -12,6 +12,13 @@ const transactionSchema = new mongoose.Schema(
     total: { type: Number, required: true },
     orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null },
     manual: { type: Boolean, default: false },
+    // De dónde vino la venta (las viejas quedan en null)
+    channel: {
+      type: String,
+      enum: ['web', 'instagram', 'marketplace', 'whatsapp', 'boca_a_boca', 'encargo', 'otro', null],
+      default: null,
+    },
+    encargo: { type: mongoose.Schema.Types.ObjectId, ref: 'Encargo', default: null },
   },
   { timestamps: true }
 );

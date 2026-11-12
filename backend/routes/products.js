@@ -5,6 +5,9 @@ const auth = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
+// Lo que ve cualquier visitante: sin costo de compra ni precio para empresas
+const PUBLIC_FIELDS = '-costPrice -wholesalePrice';
+
 // GET /api/products/admin/all — debe ir antes de /:id
 router.get('/admin/all', auth, async (req, res) => {
   try {
@@ -24,7 +27,7 @@ router.get('/', async (req, res) => {
     if (featured === 'true') filter.featured = true;
     if (includeOutOfStock !== 'true') filter.stock = { $gt: 0 };
 
-    const products = await Product.find(filter).sort({ createdAt: -1 });
+    const products = await Product.find(filter).select(PUBLIC_FIELDS).sort({ createdAt: -1 });
     res.json(products);
   } catch {
     res.status(500).json({ message: 'Error al obtener productos' });
@@ -34,7 +37,7 @@ router.get('/', async (req, res) => {
 // GET /api/products/:id — público
 router.get('/:id', async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.id).select(PUBLIC_FIELDS);
     if (!product) return res.status(404).json({ message: 'Producto no encontrado' });
     res.json(product);
   } catch {

@@ -141,3 +141,45 @@ export const transactionsAPI = {
       body: JSON.stringify(data),
     }).then(handleResponse),
 };
+
+export const encargosAPI = {
+  getAll: (token) =>
+    fetch(`${API_URL}/encargos`, { headers: buildHeaders(token) }).then(handleResponse),
+
+  create: (data, token) =>
+    fetch(`${API_URL}/encargos`, {
+      method: 'POST',
+      headers: buildHeaders(token),
+      body: JSON.stringify(data),
+    }).then(handleResponse),
+
+  update: (id, data, token) =>
+    fetch(`${API_URL}/encargos/${id}`, {
+      method: 'PUT',
+      headers: buildHeaders(token),
+      body: JSON.stringify(data),
+    }).then(handleResponse),
+
+  delete: (id, token) =>
+    fetch(`${API_URL}/encargos/${id}`, {
+      method: 'DELETE',
+      headers: buildHeaders(token),
+    }).then(handleResponse),
+};
+
+// Descarga el Excel con finanzas, inventario, pedidos y encargos
+export const exportAPI = {
+  downloadExcel: async (token) => {
+    const res = await fetch(`${API_URL}/export`, { headers: buildHeaders(token) });
+    if (!res.ok) return handleResponse(res);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mate-noble-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  },
+};

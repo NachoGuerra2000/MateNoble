@@ -2,9 +2,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Plus, Pencil, Trash2, LogOut, Package, AlertCircle, X, Upload, ImageIcon, PackagePlus, DollarSign, TrendingUp, Wallet, Receipt, Truck, ShoppingBag } from 'lucide-react';
+import { Plus, Pencil, Trash2, LogOut, Package, AlertCircle, X, Upload, ImageIcon, PackagePlus, DollarSign, TrendingUp, Wallet, Receipt, Truck, ShoppingBag, Download, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { productsAPI, transactionsAPI } from '@/lib/api';
+import { productsAPI, transactionsAPI, exportAPI } from '@/lib/api';
+import EncargosTab from '@/components/admin/EncargosTab';
+import CatalogoTab from '@/components/admin/CatalogoTab';
 import toast from 'react-hot-toast';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -17,16 +19,31 @@ const CATEGORIES = [
   { value: 'bolsos', label: 'Bolsos' },
   { value: 'bombillas', label: 'Bombillas' },
   { value: 'bombillones', label: 'Bombillones' },
+  { value: 'combos', label: 'Combos' },
   { value: 'otros', label: 'Otros' },
 ];
 
+// Por dónde llegó una venta hecha a mano (las de la web y los encargos se marcan solos)
+const SALE_CHANNELS = [
+  { value: 'marketplace', label: 'Marketplace' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'boca_a_boca', label: 'Boca a boca' },
+  { value: 'otro', label: 'Otro' },
+];
+
+const CHANNEL_SHORT = {
+  web: 'web', marketplace: 'Marketplace', instagram: 'Instagram', whatsapp: 'WhatsApp',
+  boca_a_boca: 'boca a boca', encargo: 'encargo', otro: 'otro',
+};
+
 const EMPTY_FORM = {
-  name: '', price: '', costPrice: '', image: '', images: [], description: '',
+  name: '', price: '', costPrice: '', wholesalePrice: '', image: '', images: [], description: '',
   category: 'calabaza', stock: '', featured: false, active: true,
 };
 
 export default function AdminDashboard() {
-  const { token, username, isAuthenticated, logout } = useAuth();
+  const { token, username, isAuthenticated, ready, logout } = useAuth();
   const router = useRouter();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -65,8 +82,8 @@ export default function AdminDashboard() {
   const [editItemSaving, setEditItemSaving] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) router.replace('/acceso/login');
-  }, [isAuthenticated, router]);
+    if (ready && !isAuthenticated) router.replace('/acceso/login');
+  }, [ready, isAuthenticated, router]);
 
   const handleAuthError = useCallback((err) => {
     if (err?.status === 401) {
@@ -112,6 +129,19 @@ export default function AdminDashboard() {
 
   useEffect(() => { loadProducts(); }, [loadProducts]);
   useEffect(() => { if (tab === 'finanzas') loadFinance(); }, [tab, loadFinance]);
+
+  const [exporting, setExporting] = useState(false);
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await exportAPI.downloadExcel(token);
+      toast.success('Excel descargado');
+    } catch (err) {
+      if (!handleAuthError(err)) toast.error(err.message || 'Error al exportar');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleDeleteTransaction = async () => {
     if (!deleteTransactionId) return;
@@ -195,7 +225,7 @@ export default function AdminDashboard() {
   };
 
   const openSale = (target) => {
-    setSaleForm({ target, quantity: '1', unitPrice: String(target.price) });
+    setSaleForm({ target, quantity: '1', unitPrice: String(target.price), channel: '' });
   };
 
   const handleSaleSubmit = async (e) => {
@@ -209,6 +239,10 @@ export default function AdminDashboard() {
       toast.error(`Solo quedan ${saleForm.target.stock} en stock`);
       return;
     }
+    if (!saleForm.channel) {
+      toast.error('Elegí por dónde vino la venta');
+      return;
+    }
     setSaleSaving(true);
     try {
       await transactionsAPI.sale(
@@ -216,6 +250,7 @@ export default function AdminDashboard() {
           ...targetRef(saleForm.target),
           quantity: qty,
           unitPrice: saleForm.unitPrice === '' ? undefined : Number(saleForm.unitPrice),
+          channel: saleForm.channel,
         },
         token
       );
@@ -380,6 +415,7 @@ export default function AdminDashboard() {
       name: product.name,
       price: product.price,
       costPrice: product.costPrice ?? '',
+      wholesalePrice: product.wholesalePrice || '',
       image: product.image,
       images,
       description: product.description,
@@ -399,7 +435,7 @@ export default function AdminDashboard() {
     }
     setSaving(true);
     const images = form.images.length ? form.images : (form.image ? [form.image] : []);
-    const payload = { ...form, price: Number(form.price), costPrice: Number(form.costPrice), stock: Number(form.stock), images, image: images[0] || form.image };
+    const payload = { ...form, price: Number(form.price), costPrice: Number(form.costPrice), wholesalePrice: Number(form.wholesalePrice) || 0, stock: Number(form.stock), images, image: images[0] || form.image };
     try {
       if (editingProduct) {
         await productsAPI.update(editingProduct._id, payload, token);
@@ -509,8 +545,9 @@ export default function AdminDashboard() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Tabs */}
-        <div className="flex gap-2 mb-8 bg-white rounded-xl p-1.5 shadow-sm w-fit">
+        {/* Tabs + export */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8">
+        <div className="flex flex-wrap gap-2 bg-white rounded-xl p-1.5 shadow-sm w-fit">
           <button
             onClick={() => setTab('productos')}
             className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === 'productos' ? 'bg-mate-800 text-white' : 'text-mate-600 hover:bg-mate-50'}`}
@@ -529,7 +566,37 @@ export default function AdminDashboard() {
           >
             Compra mayorista
           </button>
+          <button
+            onClick={() => setTab('encargos')}
+            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === 'encargos' ? 'bg-mate-800 text-white' : 'text-mate-600 hover:bg-mate-50'}`}
+          >
+            Encargos
+          </button>
+          <button
+            onClick={() => setTab('catalogo')}
+            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === 'catalogo' ? 'bg-mate-800 text-white' : 'text-mate-600 hover:bg-mate-50'}`}
+          >
+            Catálogo
+          </button>
         </div>
+        <button
+          onClick={handleExport}
+          disabled={exporting}
+          className="flex items-center gap-2 bg-white text-mate-800 border border-mate-200 px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm hover:bg-mate-50 transition-colors disabled:opacity-60"
+          title="Descarga un Excel con finanzas, ventas por canal, inventario, pedidos web y encargos"
+        >
+          {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          {exporting ? 'Generando...' : 'Exportar a Excel'}
+        </button>
+        </div>
+
+        {tab === 'encargos' && (
+          <EncargosTab token={token} onAuthError={handleAuthError} onSalesChanged={loadFinance} products={products} />
+        )}
+
+        {tab === 'catalogo' && (
+          <CatalogoTab token={token} onAuthError={handleAuthError} onProductsChanged={loadProducts} />
+        )}
 
         {tab === 'productos' && (
         <>
@@ -779,6 +846,44 @@ export default function AdminDashboard() {
           )}
         </div>
 
+        {/* Per-channel breakdown */}
+        <h2 className="text-xl font-bold text-mate-900 mb-1">Ventas por canal</h2>
+        <p className="text-mate-500 text-sm mb-4">De dónde vienen tus ventas. Las ventas viejas a mano quedan como &quot;sin dato&quot;.</p>
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-8">
+          {!summary?.channels?.length ? (
+            <div className="p-10 text-center text-mate-400">Todavía no hay ventas.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-mate-50 border-b border-mate-100">
+                  <tr>
+                    <th className="text-left px-5 py-3 font-semibold text-mate-600">Canal</th>
+                    <th className="text-center px-4 py-3 font-semibold text-mate-600">Ventas</th>
+                    <th className="text-right px-4 py-3 font-semibold text-mate-600">Ingresos</th>
+                    <th className="text-right px-4 py-3 font-semibold text-mate-600 hidden sm:table-cell">% del total</th>
+                    <th className="text-right px-5 py-3 font-semibold text-mate-600">Ganancia</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-mate-50">
+                  {summary.channels.map((c) => (
+                    <tr key={c.channel} className="hover:bg-mate-50/50 transition-colors">
+                      <td className="px-5 py-3 font-medium text-mate-800">{c.label}</td>
+                      <td className="px-4 py-3 text-center text-mate-600">{c.sales}</td>
+                      <td className="px-4 py-3 text-right text-mate-600">${c.revenue.toLocaleString('es-AR')}</td>
+                      <td className="px-4 py-3 text-right text-mate-500 hidden sm:table-cell">
+                        {summary.totalRevenue ? Math.round((c.revenue / summary.totalRevenue) * 100) : 0}%
+                      </td>
+                      <td className={`px-5 py-3 text-right font-semibold ${c.profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                        ${c.profit.toLocaleString('es-AR')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
         {/* Per-product breakdown */}
         <h2 className="text-xl font-bold text-mate-900 mb-4">Ganancia por producto</h2>
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-8">
@@ -843,7 +948,9 @@ export default function AdminDashboard() {
                           {t.type === 'compra' ? 'Compra' : 'Venta'}
                         </span>
                         {t.type === 'venta' && (
-                          <span className="ml-1.5 text-xs text-mate-400">{t.orderId ? 'web' : 'a mano'}</span>
+                          <span className="ml-1.5 text-xs text-mate-400">
+                            {CHANNEL_SHORT[t.channel] || (t.orderId ? 'web' : 'a mano')}
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-mate-800">{t.productName}</td>
@@ -1017,6 +1124,23 @@ export default function AdminDashboard() {
                   />
                 </Field>
               </div>
+
+              <Field label="Precio para empresas (ARS)">
+                <input
+                  type="number"
+                  min="0"
+                  value={form.wholesalePrice}
+                  onChange={(e) => setForm({ ...form, wholesalePrice: e.target.value })}
+                  className="input-base"
+                  placeholder="Opcional: precio por unidad en ventas grandes"
+                />
+                <p className="text-xs text-mate-400 mt-1">
+                  Si lo completás, el producto aparece en el catálogo PDF para empresas.
+                  {Number(form.wholesalePrice) > 0 && form.costPrice !== '' && (
+                    <> Ganás <span className={Number(form.wholesalePrice) - Number(form.costPrice) >= 0 ? 'text-green-600 font-semibold' : 'text-red-500 font-semibold'}>${(Number(form.wholesalePrice) - Number(form.costPrice)).toLocaleString('es-AR')}</span> por unidad.</>
+                  )}
+                </p>
+              </Field>
 
               <Field label="Stock *">
                 <input
@@ -1345,6 +1469,20 @@ export default function AdminDashboard() {
                   />
                 </Field>
                 <p className="text-xs text-mate-400 -mt-2">Stock disponible: {saleForm.target.stock}</p>
+                <Field label="¿Por dónde vino la venta? *">
+                  <div className="grid grid-cols-2 gap-2">
+                    {SALE_CHANNELS.map((c) => (
+                      <button
+                        key={c.value}
+                        type="button"
+                        onClick={() => setSaleForm({ ...saleForm, channel: c.value })}
+                        className={`px-3 py-2 rounded-lg text-sm border transition-colors ${saleForm.channel === c.value ? 'border-mate-700 bg-mate-50 text-mate-900 font-semibold' : 'border-mate-200 text-mate-600 hover:border-mate-400'}`}
+                      >
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </Field>
                 <div className="bg-mate-50 rounded-xl p-3 text-sm space-y-1">
                   <div className="flex justify-between"><span className="text-mate-500">Cobrás</span><span className="font-semibold text-mate-800">${total.toLocaleString('es-AR')}</span></div>
                   <div className="flex justify-between"><span className="text-mate-500">Ganancia</span><span className={`font-semibold ${profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>${profit.toLocaleString('es-AR')}</span></div>

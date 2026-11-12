@@ -16,6 +16,7 @@ const CATEGORY_LABELS = {
   bolsos: 'Bolsos',
   bombillas: 'Bombillas',
   bombillones: 'Bombillones',
+  combos: 'Combos',
   otros: 'Otros',
 };
 

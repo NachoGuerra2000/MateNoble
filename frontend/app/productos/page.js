@@ -14,6 +14,7 @@ const CATEGORIES = [
   { slug: 'bolsos', label: 'Bolsos' },
   { slug: 'bombillas', label: 'Bombillas' },
   { slug: 'bombillones', label: 'Bombillones' },
+  { slug: 'combos', label: 'Combos' },
   { slug: 'otros', label: 'Otros' },
 ];
 
