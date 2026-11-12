@@ -12,7 +12,15 @@ const DEFAULT_CONFIG = {
     'Regalá tradición. Mates artesanales para tu equipo, tus clientes o tu evento de fin de año. Personalizamos con el logo de tu empresa o el escudo de tu club.',
   conditions:
     'Pedido mínimo: 10 unidades · Seña del 50% para confirmar y saldo contra entrega · Entregas en Tucumán · Consultá por grabado personalizado',
-  contact: 'Instagram: @matenoble.tuc · WhatsApp: ',
+  contact: 'WhatsApp: 381 212-9848 · Instagram: @matenoble.tuc',
+};
+// Texto de contacto viejo (sin número) que pudo quedar guardado en el navegador
+const OLD_CONTACT = 'Instagram: @matenoble.tuc · WhatsApp: ';
+
+// Link de WhatsApp a partir del primer número de Tucumán que aparezca en el contacto (381 xxx-xxxx)
+const whatsappLink = (contact) => {
+  const digits = (contact || '').match(/381[\s-]?\d{3}[\s-]?\d{4}/)?.[0].replace(/\D/g, '');
+  return digits ? `https://wa.me/549${digits}` : null;
 };
 
 const GREEN = [22, 71, 33];
@@ -94,6 +102,9 @@ const buildPdf = async (products, config) => {
     doc.setTextColor(...GREEN);
     doc.setFont('helvetica', 'bold');
     doc.text(config.contact || '', M, H - 9);
+    // Tocar el contacto en el PDF abre el chat de WhatsApp
+    const wa = whatsappLink(config.contact);
+    if (wa) doc.link(M, H - 13, doc.getTextWidth(config.contact), 6, { url: wa });
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...GRAY);
     doc.text(`Precios por unidad, válidos al ${date} · Página ${page} de ${total}`, W - M, H - 9, { align: 'right' });
@@ -179,7 +190,11 @@ export default function CatalogoTab({ token, onAuthError, onProductsChanged }) {
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(CONFIG_KEY) || 'null');
-      if (saved) setConfig({ ...DEFAULT_CONFIG, ...saved.config });
+      if (saved) {
+        const merged = { ...DEFAULT_CONFIG, ...saved.config };
+        if (!merged.contact || merged.contact === OLD_CONTACT) merged.contact = DEFAULT_CONFIG.contact;
+        setConfig(merged);
+      }
       if (saved?.excluded) setExcluded(saved.excluded);
     } catch {}
     try {
@@ -230,7 +245,9 @@ export default function CatalogoTab({ token, onAuthError, onProductsChanged }) {
   };
 
   const generate = async (share) => {
-    if (!included.length) return toast.error('No hay productos con precio para empresas');
+    if (!included.length) {
+      return toast.error('Todavía no hay productos en el catálogo: escribí el "precio para empresas" de cada mate en la lista de abajo', { duration: 6000 });
+    }
     setGenerating(true);
     try {
       const doc = await buildPdf(included, config);
@@ -264,7 +281,7 @@ export default function CatalogoTab({ token, onAuthError, onProductsChanged }) {
     <>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
-          <h2 className="text-xl font-bold text-mate-900">Catálogo para empresas</h2>
+          <h2 className="text-xl font-bold text-mate-900">Pymes y empresas</h2>
           <p className="text-mate-500 text-sm">Un PDF con fotos y el precio para empresas, listo para mandar por WhatsApp o mail. No muestra tu costo.</p>
         </div>
         <div className="flex gap-2">
@@ -297,7 +314,9 @@ export default function CatalogoTab({ token, onAuthError, onProductsChanged }) {
         <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm overflow-hidden h-fit">
           <div className="px-5 py-3 border-b border-mate-100 flex items-center justify-between">
             <h3 className="font-bold text-mate-900">Productos</h3>
-            <span className="text-sm text-mate-500">{included.length} en el catálogo</span>
+            <span className={`text-sm ${included.length ? 'text-mate-500' : 'text-amber-600 font-medium'}`}>
+              {included.length ? `${included.length} en el catálogo` : 'Ninguno todavía: poné el precio para empresas'}
+            </span>
           </div>
           {loading ? (
             <div className="p-10 text-center text-mate-400">Cargando...</div>

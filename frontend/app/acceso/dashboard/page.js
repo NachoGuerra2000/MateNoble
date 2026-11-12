@@ -576,7 +576,7 @@ export default function AdminDashboard() {
             onClick={() => setTab('catalogo')}
             className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === 'catalogo' ? 'bg-mate-800 text-white' : 'text-mate-600 hover:bg-mate-50'}`}
           >
-            Catálogo
+            Pymes y empresas
           </button>
         </div>
         <button
