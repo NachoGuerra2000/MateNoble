@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { productsAPI, transactionsAPI, exportAPI } from '@/lib/api';
 import EncargosTab from '@/components/admin/EncargosTab';
 import CatalogoTab from '@/components/admin/CatalogoTab';
+import { prepareImage, readUploadResponse } from '@/lib/imageUpload';
 import toast from 'react-hot-toast';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -307,14 +308,13 @@ export default function AdminDashboard() {
     setUploadingImage(true);
     try {
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', await prepareImage(file));
       const res = await fetch(`${API_URL}/upload`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      const data = await readUploadResponse(res);
       setForm((prev) => ({
         ...prev,
         image: data.url,
@@ -326,6 +326,7 @@ export default function AdminDashboard() {
       toast.error(err.message || 'Error al subir imagen');
     } finally {
       setUploadingImage(false);
+      e.target.value = '';
     }
   };
 
@@ -335,14 +336,13 @@ export default function AdminDashboard() {
     setUploadingImage(true);
     try {
       const formData = new FormData();
-      files.forEach((f) => formData.append('images', f));
+      for (const f of files) formData.append('images', await prepareImage(f));
       const res = await fetch(`${API_URL}/upload/multiple`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      const data = await readUploadResponse(res);
       setForm((prev) => ({ ...prev, images: [...prev.images, ...data.urls] }));
       toast.success(`${data.urls.length} imagen(es) agregada(s)`);
     } catch (err) {
@@ -1220,8 +1220,8 @@ export default function AdminDashboard() {
                   )}
 
                   {/* Botones de subida */}
-                  <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageUpload} />
-                  <input ref={multiFileInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={handleExtraImagesUpload} />
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                  <input ref={multiFileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleExtraImagesUpload} />
 
                   <div className="flex gap-2">
                     <button

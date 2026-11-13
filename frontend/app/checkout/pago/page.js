@@ -5,6 +5,7 @@ import { useCart } from '@/context/CartContext';
 import { CheckCircle, Copy, Loader2, ImageIcon, X, Banknote, CreditCard } from 'lucide-react';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
+import { prepareImage, readUploadResponse } from '@/lib/imageUpload';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 const MP_ALIAS = 'mates.nobles';
@@ -40,14 +41,13 @@ export default function PagoPage() {
     setUploading(true);
     try {
       const form = new FormData();
-      form.append('image', file);
+      form.append('image', await prepareImage(file));
       const res = await fetch(`${API_URL}/upload/comprobante`, { method: 'POST', body: form });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      const data = await readUploadResponse(res);
       setComprobante(data.url);
       toast.success('Comprobante subido correctamente');
-    } catch {
-      toast.error('Error al subir el comprobante, intentá de nuevo');
+    } catch (err) {
+      toast.error(err.message || 'Error al subir el comprobante, intentá de nuevo');
       setPreview(null);
     } finally {
       setUploading(false);

@@ -17,19 +17,20 @@ const makeStorage = (folder) =>
     cloudinary,
     params: {
       folder,
-      allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+      // heic/heif: formato de las fotos de iPhone (Cloudinary las convierte)
+      allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'],
       transformation: [{ quality: 'auto', fetch_format: 'auto' }],
     },
   });
 
 const uploadProducto = multer({
   storage: makeStorage('matenoble/productos'),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 
 const uploadComprobante = multer({
   storage: makeStorage('matenoble/comprobantes'),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 
 router.post('/', auth, uploadProducto.single('image'), (req, res) => {
@@ -45,6 +46,18 @@ router.post('/comprobante', uploadComprobante.single('image'), (req, res) => {
 router.post('/multiple', auth, uploadProducto.array('images', 10), (req, res) => {
   if (!req.files?.length) return res.status(400).json({ message: 'No se recibieron imágenes' });
   res.json({ urls: req.files.map((f) => f.path) });
+});
+
+// Cualquier error al subir (foto muy pesada, formato raro, Cloudinary caído) vuelve como JSON con un mensaje claro
+router.use((err, req, res, next) => {
+  console.error('Error al subir imagen:', err.message || err);
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ message: 'La foto pesa más de 10 MB. Probá con otra o sacala de nuevo.' });
+  }
+  if (/format/i.test(err.message || '')) {
+    return res.status(400).json({ message: 'Ese formato de imagen no se puede subir. Usá una foto JPG o PNG.' });
+  }
+  res.status(500).json({ message: 'No se pudo subir la foto. Probá de nuevo en un momento.' });
 });
 
 module.exports = router;
