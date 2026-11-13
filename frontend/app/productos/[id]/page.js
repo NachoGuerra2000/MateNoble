@@ -13,6 +13,7 @@ import { waLink } from '@/lib/whatsapp';
 const CATEGORY_LABELS = {
   calabaza: 'Calabaza',
   algarrobo: 'Algarrobo',
+  madera: 'Madera',
   acero: 'Acero',
   materas: 'Materas',
   bolsos: 'Bolsos',

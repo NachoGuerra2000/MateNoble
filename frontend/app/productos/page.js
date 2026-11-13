@@ -9,6 +9,7 @@ const CATEGORIES = [
   { slug: '', label: 'Todos' },
   { slug: 'calabaza', label: 'Calabaza' },
   { slug: 'algarrobo', label: 'Algarrobo' },
+  { slug: 'madera', label: 'Madera' },
   { slug: 'acero', label: 'Acero' },
   { slug: 'materas', label: 'Materas' },
   { slug: 'bolsos', label: 'Bolsos' },

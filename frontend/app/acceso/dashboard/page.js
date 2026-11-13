@@ -14,6 +14,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 const CATEGORIES = [
   { value: 'calabaza', label: 'Calabaza' },
   { value: 'algarrobo', label: 'Algarrobo' },
+  { value: 'madera', label: 'Madera' },
   { value: 'acero', label: 'Acero' },
   { value: 'materas', label: 'Materas' },
   { value: 'bolsos', label: 'Bolsos' },
@@ -162,6 +163,7 @@ export default function AdminDashboard() {
     setLoadForm({
       targetKey: target?.key || '',
       name: '',
+      category: 'calabaza',
       quantity: '',
       unitCost: target ? String(target.costPrice) : '',
       price: target ? String(target.price) : '',
@@ -198,7 +200,7 @@ export default function AdminDashboard() {
     try {
       await transactionsAPI.purchase(
         {
-          ...(target ? targetRef(target) : { name: loadForm.name.trim() }),
+          ...(target ? targetRef(target) : { name: loadForm.name.trim(), category: loadForm.category }),
           quantity: qty,
           unitCost: Number(loadForm.unitCost),
           price: loadForm.price === '' ? undefined : Number(loadForm.price),
@@ -692,17 +694,17 @@ export default function AdminDashboard() {
         ) : (
         <>
         {/* Finance stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
           {[
             { label: 'Invertido total', value: summary?.totalInvested ?? 0, icon: Wallet, color: 'text-mate-700' },
             { label: 'Ingresos por ventas', value: summary?.totalRevenue ?? 0, icon: DollarSign, color: 'text-blue-600' },
             { label: 'Costo de lo vendido', value: summary?.totalCost ?? 0, icon: Receipt, color: 'text-mate-500' },
             { label: 'Ganancia', value: summary?.totalProfit ?? 0, icon: TrendingUp, color: 'text-green-600' },
           ].map((stat) => (
-            <div key={stat.label} className="bg-white rounded-xl p-5 shadow-sm flex items-center gap-4">
-              <stat.icon className={`w-8 h-8 flex-shrink-0 ${stat.color}`} />
+            <div key={stat.label} className="bg-white rounded-xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 min-w-0">
+              <stat.icon className={`w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0 ${stat.color}`} />
               <div>
-                <p className="text-xl font-bold text-mate-900">${stat.value.toLocaleString('es-AR')}</p>
+                <p className="text-lg sm:text-xl font-bold text-mate-900 tabular-nums">${stat.value.toLocaleString('es-AR')}</p>
                 <p className="text-mate-500 text-sm">{stat.label}</p>
               </div>
             </div>
@@ -738,7 +740,53 @@ export default function AdminDashboard() {
           {!inventory.length ? (
             <div className="p-10 text-center text-mate-400">Todavía no cargaste productos.</div>
           ) : (
-            <div className="overflow-x-auto max-h-[32rem] overflow-y-auto">
+            <>
+            {/* En el celular: una tarjeta por producto, con todos los botones a la vista */}
+            <ul className="sm:hidden divide-y divide-mate-100">
+              {inventory
+                .filter((i) => i.name.toLowerCase().includes(inventorySearch.trim().toLowerCase()))
+                .map((i) => (
+                  <li key={i.key} className="p-4 flex flex-col gap-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-mate-900 leading-snug">{i.name}</p>
+                        <p className="text-xs mt-0.5">
+                          <span className="text-mate-500">{CATEGORIES.find((c) => c.value === i.product.category)?.label}</span>
+                          <span className={i.isStore ? 'text-mate-400' : 'text-amber-600'}> · {i.isStore ? 'En la tienda' : 'Solo en Finanzas'}</span>
+                        </p>
+                      </div>
+                      <span className={`text-sm font-bold whitespace-nowrap ${i.stock === 0 ? 'text-red-500' : i.stock < 5 ? 'text-yellow-600' : 'text-green-600'}`}>
+                        {i.stock} en stock
+                      </span>
+                    </div>
+                    <p className="text-sm text-mate-600 tabular-nums">
+                      Me salió ${i.costPrice.toLocaleString('es-AR')} · Lo vendo a <b className="text-mate-800">${i.price.toLocaleString('es-AR')}</b>
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {!i.isStore && (
+                        <button onClick={() => openEdit(i.product, { active: true })} className="flex-1 min-w-[9rem] bg-mate-700 text-white px-3 py-2.5 rounded-lg text-sm font-semibold">
+                          Publicar en la tienda
+                        </button>
+                      )}
+                      <button onClick={() => openSale(i)} disabled={i.stock === 0} className="flex items-center gap-1.5 bg-green-600 text-white px-3 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-40">
+                        <ShoppingBag className="w-4 h-4" /> Vender
+                      </button>
+                      <button onClick={() => openLoad(i)} className="p-2.5 border border-mate-200 rounded-lg text-mate-600" aria-label="Cargar stock">
+                        <PackagePlus className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => openEdit(i.product)} className="p-2.5 border border-mate-200 rounded-lg text-mate-600" aria-label="Editar producto">
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      {!i.isStore && (
+                        <button onClick={() => setDeleteManualItem(i)} className="p-2.5 border border-red-200 rounded-lg text-red-500" aria-label="Eliminar producto">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                ))}
+            </ul>
+            <div className="hidden sm:block overflow-x-auto max-h-[32rem] overflow-y-auto">
               <table className="w-full text-sm">
                 <thead className="bg-mate-50 border-b border-mate-100 sticky top-0">
                   <tr>
@@ -759,6 +807,7 @@ export default function AdminDashboard() {
                         <tr key={i.key} className="hover:bg-mate-50/50 transition-colors">
                           <td className="px-5 py-3">
                             <div className="font-medium text-mate-800">{i.name}</div>
+                            <span className="text-xs text-mate-500 mr-2">{CATEGORIES.find((c) => c.value === i.product.category)?.label}</span>
                             <span className={`text-xs ${i.isStore ? 'text-mate-400' : 'text-amber-600'}`}>
                               {i.isStore ? 'En la tienda' : 'Solo en Finanzas'}
                             </span>
@@ -820,6 +869,7 @@ export default function AdminDashboard() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </div>
 
@@ -1340,7 +1390,7 @@ export default function AdminDashboard() {
                     onChange={(e) => handleLoadTargetChange(e.target.value)}
                     className="input-base"
                   >
-                    <option value="">+ Producto nuevo (solo en finanzas)</option>
+                    <option value="">+ Producto nuevo</option>
                     {inventory.map((i) => (
                       <option key={i.key} value={i.key}>{i.name} (stock: {i.stock})</option>
                     ))}
@@ -1354,8 +1404,21 @@ export default function AdminDashboard() {
                       value={loadForm.name}
                       onChange={(e) => setLoadForm({ ...loadForm, name: e.target.value })}
                       className="input-base"
-                      placeholder="Bombilla de alpaca"
+                      placeholder="Mate de calabaza forrado en cuero"
                     />
+                  </Field>
+                )}
+                {!target && (
+                  <Field label="Tipo de producto *">
+                    <select
+                      value={loadForm.category}
+                      onChange={(e) => setLoadForm({ ...loadForm, category: e.target.value })}
+                      className="input-base"
+                    >
+                      {CATEGORIES.map((c) => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                    </select>
                   </Field>
                 )}
                 <Field label="Cantidad *">

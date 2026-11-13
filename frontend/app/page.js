@@ -9,6 +9,7 @@ import { waLink } from '@/lib/whatsapp';
 const CATEGORIES = [
   { slug: 'calabaza', label: 'Calabaza' },
   { slug: 'algarrobo', label: 'Algarrobo' },
+  { slug: 'madera', label: 'Madera' },
   { slug: 'acero', label: 'Acero' },
   { slug: 'materas', label: 'Materas' },
   { slug: 'bolsos', label: 'Bolsos' },

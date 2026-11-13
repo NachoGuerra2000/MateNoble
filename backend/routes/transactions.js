@@ -39,7 +39,7 @@ router.get('/items', auth, (req, res) => res.json([]));
 // oculto en la tienda (se publica después cargándole foto y descripción).
 router.post('/purchase', auth, async (req, res) => {
   try {
-    const { productId, name, quantity, unitCost, price } = req.body;
+    const { productId, name, category, quantity, unitCost, price } = req.body;
     const qty = Number(quantity);
     if (!qty || qty <= 0) return res.status(400).json({ message: 'Cantidad inválida' });
 
@@ -50,7 +50,7 @@ router.post('/purchase', auth, async (req, res) => {
       if (!trimmed) return res.status(400).json({ message: 'Poné el nombre del producto' });
       // Si ya existe uno con el mismo nombre se suma a ese, para no crear repetidos
       product = (await Product.findOne({ name: new RegExp(`^${escapeRegex(trimmed)}$`, 'i') }))
-        || new Product({ name: trimmed, active: false });
+        || new Product({ name: trimmed, active: false, ...(category ? { category } : {}) });
     }
 
     const cost = unitCost !== undefined && unitCost !== '' ? Number(unitCost) : product.costPrice;
