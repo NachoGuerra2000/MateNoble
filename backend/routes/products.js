@@ -8,6 +8,9 @@ const router = express.Router();
 // Lo que ve cualquier visitante: sin costo de compra ni precio para empresas
 const PUBLIC_FIELDS = '-costPrice -wholesalePrice';
 
+// Mensaje claro de validación ("Para mostrarlo en la tienda falta la foto") en vez del texto técnico de Mongoose
+const errorMessage = (err) => (err.errors ? Object.values(err.errors)[0].message : err.message);
+
 // GET /api/products/admin/all — debe ir antes de /:id
 router.get('/admin/all', auth, async (req, res) => {
   try {
@@ -65,23 +68,23 @@ router.post('/', auth, async (req, res) => {
 
     res.status(201).json(product);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ message: errorMessage(err) });
   }
 });
 
 // PUT /api/products/:id — solo admin
 router.put('/:id', auth, async (req, res) => {
   try {
-    const existing = await Product.findById(req.params.id);
-    if (!existing) return res.status(404).json({ message: 'Producto no encontrado' });
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ message: 'Producto no encontrado' });
+    const previousStock = product.stock;
 
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
+    // Se guarda sobre el documento para que las validaciones sepan si se muestra en la tienda
+    const { _id, createdAt, updatedAt, __v, ...changes } = req.body;
+    product.set(changes);
+    await product.save();
 
-    const addedStock = product.stock - existing.stock;
+    const addedStock = product.stock - previousStock;
     if (addedStock > 0) {
       await Transaction.create({
         type: 'compra',
@@ -95,7 +98,7 @@ router.put('/:id', auth, async (req, res) => {
 
     res.json(product);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ message: errorMessage(err) });
   }
 });
 
@@ -113,7 +116,6 @@ router.post('/:id/restock', auth, async (req, res) => {
 
     product.stock += qty;
     product.costPrice = unitCost;
-    product.active = true;
     await product.save();
 
     await Transaction.create({
@@ -127,7 +129,7 @@ router.post('/:id/restock', auth, async (req, res) => {
 
     res.json(product);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ message: errorMessage(err) });
   }
 });
 
@@ -159,7 +161,6 @@ router.post('/bulk-restock', auth, async (req, res) => {
     for (const { product, qty, unitCost } of toApply) {
       product.stock += qty;
       product.costPrice = unitCost;
-      product.active = true;
       await product.save();
 
       await Transaction.create({
@@ -176,7 +177,7 @@ router.post('/bulk-restock', auth, async (req, res) => {
 
     res.json({ products: updatedProducts });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ message: errorMessage(err) });
   }
 });
 

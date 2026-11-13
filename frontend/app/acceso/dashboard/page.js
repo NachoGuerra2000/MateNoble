@@ -71,15 +71,12 @@ export default function AdminDashboard() {
   const [wholesaleSaving, setWholesaleSaving] = useState(false);
 
   // Carga y venta a mano desde Finanzas
-  const [manualItems, setManualItems] = useState([]);
   const [inventorySearch, setInventorySearch] = useState('');
   const [loadForm, setLoadForm] = useState(null); // { target, name, quantity, unitCost, price }
   const [loadSaving, setLoadSaving] = useState(false);
   const [saleForm, setSaleForm] = useState(null); // { target, quantity, unitPrice }
   const [saleSaving, setSaleSaving] = useState(false);
   const [deleteManualItem, setDeleteManualItem] = useState(null);
-  const [editItemForm, setEditItemForm] = useState(null); // { target, name, costPrice, price }
-  const [editItemSaving, setEditItemSaving] = useState(false);
 
   useEffect(() => {
     if (ready && !isAuthenticated) router.replace('/acceso/login');
@@ -112,14 +109,12 @@ export default function AdminDashboard() {
     if (!token) return;
     setFinanceLoading(true);
     try {
-      const [summaryData, transactionsData, manualItemsData] = await Promise.all([
+      const [summaryData, transactionsData] = await Promise.all([
         transactionsAPI.getSummary(token),
         transactionsAPI.getAll(token),
-        transactionsAPI.getManualItems(token),
       ]);
       setSummary(summaryData);
       setTransactions(transactionsData);
-      setManualItems(manualItemsData);
     } catch (err) {
       if (!handleAuthError(err)) toast.error('Error al cargar las finanzas');
     } finally {
@@ -159,12 +154,9 @@ export default function AdminDashboard() {
     }
   };
 
-  // Productos de la tienda + los cargados a mano, todos vendibles desde Finanzas
-  const inventory = [
-    ...products.map((p) => ({ key: `p-${p._id}`, isStore: true, id: p._id, name: p.name, stock: p.stock, costPrice: p.costPrice ?? 0, price: p.price })),
-    ...manualItems.map((m) => ({ key: `m-${m._id}`, isStore: false, id: m._id, name: m.name, stock: m.stock, costPrice: m.costPrice, price: m.price })),
-  ];
-  const targetRef = (target) => (target.isStore ? { productId: target.id } : { manualItemId: target.id });
+  // Una sola lista de productos: los que se muestran en la tienda y los que son solo para Finanzas
+  const inventory = products.map((p) => ({ key: `p-${p._id}`, isStore: p.active, id: p._id, name: p.name, stock: p.stock, costPrice: p.costPrice ?? 0, price: p.price, product: p }));
+  const targetRef = (target) => ({ productId: target.id });
 
   const openLoad = (target = null) => {
     setLoadForm({
@@ -265,46 +257,14 @@ export default function AdminDashboard() {
     }
   };
 
-  const openEditItem = (target) => {
-    setEditItemForm({ target, name: target.name, costPrice: String(target.costPrice), price: String(target.price) });
-  };
-
-  const handleEditItemSubmit = async (e) => {
-    e.preventDefault();
-    if (!editItemForm.name.trim() || editItemForm.costPrice === '' || editItemForm.price === '') {
-      toast.error('Completá nombre, costo y precio de venta');
-      return;
-    }
-    const data = {
-      name: editItemForm.name.trim(),
-      costPrice: Number(editItemForm.costPrice),
-      price: Number(editItemForm.price),
-    };
-    setEditItemSaving(true);
-    try {
-      if (editItemForm.target.isStore) {
-        await productsAPI.update(editItemForm.target.id, data, token);
-      } else {
-        await transactionsAPI.updateManualItem(editItemForm.target.id, data, token);
-      }
-      toast.success('Producto actualizado');
-      setEditItemForm(null);
-      loadFinance();
-      loadProducts();
-    } catch (err) {
-      if (!handleAuthError(err)) toast.error(err.message || 'Error al guardar');
-    } finally {
-      setEditItemSaving(false);
-    }
-  };
-
   const handleDeleteManualItem = async () => {
     if (!deleteManualItem) return;
     try {
-      await transactionsAPI.deleteManualItem(deleteManualItem.id, token);
+      await productsAPI.delete(deleteManualItem.id, token);
       toast.success('Producto eliminado');
       setDeleteManualItem(null);
       loadFinance();
+      loadProducts();
     } catch (err) {
       if (!handleAuthError(err)) toast.error(err.message || 'Error al eliminar');
     }
@@ -407,7 +367,7 @@ export default function AdminDashboard() {
     setModalOpen(true);
   };
 
-  const openEdit = (product) => {
+  const openEdit = (product, overrides = {}) => {
     setEditingProduct(product);
     const images = product.images?.length ? product.images : (product.image ? [product.image] : []);
     setImagePreview(images[0] || product.image);
@@ -424,14 +384,20 @@ export default function AdminDashboard() {
       featured: product.featured,
       madeToOrder: !!product.madeToOrder,
       active: product.active,
+      ...overrides,
     });
     setModalOpen(true);
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.price || form.costPrice === '' || !form.image || !form.description || form.stock === '') {
-      toast.error('Completá todos los campos obligatorios');
+    if (!form.name || form.price === '' || form.costPrice === '' || form.stock === '') {
+      toast.error('Completá nombre, precios y stock');
+      return;
+    }
+    // Para mostrarlo en la tienda hacen falta foto y descripción
+    if (form.active && (!(form.images.length || form.image) || !form.description?.trim())) {
+      toast.error('Para mostrarlo en la tienda cargale al menos una foto y la descripción');
       return;
     }
     setSaving(true);
@@ -447,6 +413,7 @@ export default function AdminDashboard() {
       }
       setModalOpen(false);
       loadProducts();
+      if (tab === 'finanzas') loadFinance();
     } catch (err) {
       if (!handleAuthError(err)) toast.error(err.message || 'Error al guardar');
     } finally {
@@ -658,7 +625,11 @@ export default function AdminDashboard() {
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
                           <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-mate-100 flex-shrink-0">
-                            <Image src={p.images?.[0] || p.image} alt={p.name} fill className="object-cover" sizes="40px" />
+                            {(p.images?.[0] || p.image) ? (
+                              <Image src={p.images?.[0] || p.image} alt={p.name} fill className="object-cover" sizes="40px" />
+                            ) : (
+                              <ImageIcon className="w-5 h-5 text-mate-300 m-auto absolute inset-0" />
+                            )}
                           </div>
                           <span className="font-medium text-mate-800 line-clamp-1">{p.name}</span>
                         </div>
@@ -676,7 +647,7 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-4 py-3 text-center hidden sm:table-cell">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.active ? 'bg-green-100 text-green-700' : 'bg-mate-100 text-mate-500'}`}>
-                          {p.active ? 'Activo' : 'Inactivo'}
+                          {p.active ? 'En la tienda' : 'Solo en Finanzas'}
                         </span>
                       </td>
                       <td className="px-5 py-3 text-right">
@@ -789,8 +760,13 @@ export default function AdminDashboard() {
                           <td className="px-5 py-3">
                             <div className="font-medium text-mate-800">{i.name}</div>
                             <span className={`text-xs ${i.isStore ? 'text-mate-400' : 'text-amber-600'}`}>
-                              {i.isStore ? 'En la tienda' : 'Solo en finanzas'}
+                              {i.isStore ? 'En la tienda' : 'Solo en Finanzas'}
                             </span>
+                            {!i.isStore && (
+                              <button onClick={() => openEdit(i.product, { active: true })} className="ml-2 text-xs font-semibold text-mate-700 underline underline-offset-2 hover:text-mate-900">
+                                Publicar en la tienda
+                              </button>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-center">
                             <span className={`font-semibold ${i.stock === 0 ? 'text-red-500' : i.stock < 5 ? 'text-yellow-600' : 'text-green-600'}`}>
@@ -821,9 +797,9 @@ export default function AdminDashboard() {
                                 <PackagePlus className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => openEditItem(i)}
+                                onClick={() => openEdit(i.product)}
                                 className="p-1.5 text-mate-500 hover:text-mate-800 hover:bg-mate-100 rounded-lg transition-colors"
-                                title="Editar precios"
+                                title="Editar producto (precios, foto, descripción)"
                               >
                                 <Pencil className="w-4 h-4" />
                               </button>
@@ -1154,7 +1130,7 @@ export default function AdminDashboard() {
                 />
               </Field>
 
-              <Field label="Categoría *">
+              <Field label={`Categoría${form.active ? ' *' : ''}`}>
                 <select
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
@@ -1166,7 +1142,7 @@ export default function AdminDashboard() {
                 </select>
               </Field>
 
-              <Field label="Imágenes *">
+              <Field label={`Imágenes${form.active ? ' *' : ' (para publicarlo en la tienda)'}`}>
                 <div className="space-y-3">
                   {/* Grid de imágenes cargadas */}
                   {form.images.length > 0 && (
@@ -1218,7 +1194,7 @@ export default function AdminDashboard() {
                 </div>
               </Field>
 
-              <Field label="Descripción *">
+              <Field label={`Descripción${form.active ? ' *' : ''}`}>
                 <textarea
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -1245,7 +1221,7 @@ export default function AdminDashboard() {
                     onChange={(e) => setForm({ ...form, active: e.target.checked })}
                     className="w-4 h-4 accent-mate-700"
                   />
-                  <span className="text-sm text-mate-700 font-medium">Activo (visible)</span>
+                  <span className="text-sm text-mate-700 font-medium">Mostrar en la tienda</span>
                 </label>
               </div>
               <label className="flex items-start gap-2 cursor-pointer">
@@ -1515,79 +1491,6 @@ export default function AdminDashboard() {
                     className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors disabled:opacity-60"
                   >
                     {saleSaving ? 'Guardando...' : 'Vender'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Edit inventory item modal */}
-      {editItemForm && (() => {
-        const margin = (Number(editItemForm.price) || 0) - (Number(editItemForm.costPrice) || 0);
-        return (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-lg font-bold text-mate-900">Editar producto</h3>
-                <button onClick={() => setEditItemForm(null)} className="text-mate-400 hover:text-mate-700">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleEditItemSubmit} className="space-y-4">
-                <Field label="Nombre *">
-                  <input
-                    type="text"
-                    value={editItemForm.name}
-                    onChange={(e) => setEditItemForm({ ...editItemForm, name: e.target.value })}
-                    className="input-base"
-                  />
-                </Field>
-                <div className="grid grid-cols-2 gap-4">
-                  <Field label="Me salió c/u (ARS) *">
-                    <input
-                      type="number"
-                      min="0"
-                      autoFocus
-                      value={editItemForm.costPrice}
-                      onChange={(e) => setEditItemForm({ ...editItemForm, costPrice: e.target.value })}
-                      className="input-base"
-                    />
-                  </Field>
-                  <Field label="Lo vendo a (ARS) *">
-                    <input
-                      type="number"
-                      min="0"
-                      value={editItemForm.price}
-                      onChange={(e) => setEditItemForm({ ...editItemForm, price: e.target.value })}
-                      className="input-base"
-                    />
-                  </Field>
-                </div>
-                <p className="text-sm text-mate-600">
-                  Ganás por unidad: <span className={`font-semibold ${margin >= 0 ? 'text-green-600' : 'text-red-500'}`}>${margin.toLocaleString('es-AR')}</span>
-                </p>
-                <p className="text-xs text-mate-400 -mt-2">
-                  {editItemForm.target.isStore ? 'Es un producto de la tienda: los cambios también se ven en la página. ' : ''}
-                  Las compras y ventas ya registradas no cambian.
-                </p>
-
-                <div className="flex gap-3 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setEditItemForm(null)}
-                    className="flex-1 border border-mate-200 text-mate-700 py-3 rounded-xl font-medium hover:bg-mate-50 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={editItemSaving}
-                    className="flex-1 bg-mate-800 text-white py-3 rounded-xl font-semibold hover:bg-mate-700 transition-colors disabled:opacity-60"
-                  >
-                    {editItemSaving ? 'Guardando...' : 'Guardar'}
                   </button>
                 </div>
               </form>

@@ -2,7 +2,6 @@ const express = require('express');
 const ExcelJS = require('exceljs');
 const Transaction = require('../models/Transaction');
 const Product = require('../models/Product');
-const ManualItem = require('../models/ManualItem');
 const Order = require('../models/Order');
 const Encargo = require('../models/Encargo');
 const auth = require('../middleware/authMiddleware');
@@ -28,11 +27,10 @@ const addSheet = (wb, name, columns, rows) => {
 // GET /api/export — solo admin: descarga un Excel con finanzas, inventario, pedidos y encargos
 router.get('/', auth, async (req, res) => {
   try {
-    const [summary, transactions, products, manualItems, orders, encargos] = await Promise.all([
+    const [summary, transactions, products, orders, encargos] = await Promise.all([
       buildSummary(),
       Transaction.find().sort({ createdAt: -1 }),
       Product.find().sort({ category: 1, name: 1 }),
-      ManualItem.find().sort({ name: 1 }),
       Order.find().sort({ createdAt: -1 }),
       Encargo.find().sort({ createdAt: -1 }),
     ]);
@@ -49,7 +47,7 @@ router.get('/', auth, async (req, res) => {
       { k: 'Ingresos por ventas', v: summary.totalRevenue },
       { k: 'Costo de lo vendido', v: summary.totalCost },
       { k: 'Ganancia', v: summary.totalProfit },
-      { k: 'Valor del stock actual (a costo)', v: products.reduce((s, p) => s + p.stock * p.costPrice, 0) + manualItems.reduce((s, i) => s + i.stock * i.costPrice, 0) },
+      { k: 'Valor del stock actual (a costo)', v: products.reduce((s, p) => s + p.stock * p.costPrice, 0) },
       { k: 'Señas cobradas en encargos abiertos', v: encargos.filter((e) => !['entregado', 'cancelado'].includes(e.status)).reduce((s, e) => s + e.depositPaid, 0) },
       { k: 'Saldo a cobrar de encargos abiertos', v: encargos.filter((e) => !['entregado', 'cancelado'].includes(e.status)).reduce((s, e) => s + e.balance, 0) },
     ]);
@@ -107,12 +105,8 @@ router.get('/', auth, async (req, res) => {
       { header: 'Visible en tienda', key: 'active', width: 16 },
     ], [
       ...products.map((p) => ({
-        name: p.name, where: 'Tienda', category: p.category, stock: p.stock, costPrice: p.costPrice, price: p.price,
+        name: p.name, where: p.active ? 'Tienda' : 'Solo Finanzas', category: p.category, stock: p.stock, costPrice: p.costPrice, price: p.price,
         margin: p.price - p.costPrice, wholesalePrice: p.wholesalePrice || null, stockValue: p.stock * p.costPrice, active: p.active ? 'Sí' : 'No',
-      })),
-      ...manualItems.map((i) => ({
-        name: i.name, where: 'Solo Finanzas', category: '', stock: i.stock, costPrice: i.costPrice, price: i.price,
-        margin: i.price - i.costPrice, stockValue: i.stock * i.costPrice, active: 'No',
       })),
     ]);
 

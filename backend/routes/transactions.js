@@ -1,13 +1,15 @@
 const express = require('express');
 const Transaction = require('../models/Transaction');
 const Product = require('../models/Product');
-const ManualItem = require('../models/ManualItem');
 const auth = require('../middleware/authMiddleware');
 const { buildSummary } = require('../lib/finance');
 
 const MANUAL_CHANNELS = ['instagram', 'marketplace', 'whatsapp', 'boca_a_boca', 'otro'];
 
 const router = express.Router();
+
+const errorMessage = (err) => (err.errors ? Object.values(err.errors)[0].message : err.message);
+const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // GET /api/transactions — solo admin: historial (últimos 200 movimientos)
 router.get('/', auth, async (req, res) => {
@@ -28,143 +30,90 @@ router.get('/summary', auth, async (req, res) => {
   }
 });
 
-// GET /api/transactions/items — solo admin: productos cargados a mano (no están en la tienda)
-router.get('/items', auth, async (req, res) => {
-  try {
-    const items = await ManualItem.find().sort({ name: 1 });
-    res.json(items);
-  } catch {
-    res.status(500).json({ message: 'Error al obtener los productos manuales' });
-  }
-});
-
-// PUT /api/transactions/items/:id — solo admin: editar nombre, costo o precio de un producto manual
-router.put('/items/:id', auth, async (req, res) => {
-  try {
-    const { name, costPrice, price } = req.body;
-    const update = {};
-    if (name !== undefined) update.name = String(name).trim();
-    if (costPrice !== undefined && costPrice !== '') update.costPrice = Number(costPrice);
-    if (price !== undefined && price !== '') update.price = Number(price);
-
-    const item = await ManualItem.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
-    if (!item) return res.status(404).json({ message: 'Producto no encontrado' });
-    res.json(item);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
-});
-
-// DELETE /api/transactions/items/:id — solo admin: borra el producto manual (sus movimientos quedan en el historial)
-router.delete('/items/:id', auth, async (req, res) => {
-  try {
-    const item = await ManualItem.findByIdAndDelete(req.params.id);
-    if (!item) return res.status(404).json({ message: 'Producto no encontrado' });
-    res.json({ message: 'Producto eliminado correctamente' });
-  } catch {
-    res.status(500).json({ message: 'Error al eliminar el producto' });
-  }
-});
-
-// Busca el producto (de la tienda o manual) al que apunta una carga/venta manual
-const findTarget = async ({ productId, manualItemId }) => {
-  if (productId) {
-    const product = await Product.findById(productId);
-    return product ? { doc: product, isStore: true } : null;
-  }
-  if (manualItemId) {
-    const item = await ManualItem.findById(manualItemId);
-    return item ? { doc: item, isStore: false } : null;
-  }
-  return null;
-};
-
-const transactionRef = ({ doc, isStore }) =>
-  isStore ? { product: doc._id } : { manualItem: doc._id };
+// GET /api/transactions/items — ya no hay productos aparte en Finanzas: todo está en la lista única.
+// Queda vacía para que una versión vieja del panel no falle mientras se actualiza.
+router.get('/items', auth, (req, res) => res.json([]));
 
 // POST /api/transactions/purchase — solo admin: cargar stock a mano.
-// Sirve para productos de la tienda (productId), manuales existentes (manualItemId)
-// o uno nuevo que solo vive en Finanzas (name).
+// Sirve para un producto existente (productId) o uno nuevo por nombre: si no existe, se crea
+// oculto en la tienda (se publica después cargándole foto y descripción).
 router.post('/purchase', auth, async (req, res) => {
   try {
-    const { productId, manualItemId, name, quantity, unitCost, price } = req.body;
+    const { productId, name, quantity, unitCost, price } = req.body;
     const qty = Number(quantity);
     if (!qty || qty <= 0) return res.status(400).json({ message: 'Cantidad inválida' });
 
-    let target = await findTarget({ productId, manualItemId });
-    if (!target) {
-      if (productId || manualItemId) return res.status(404).json({ message: 'Producto no encontrado' });
+    let product = productId ? await Product.findById(productId) : null;
+    if (!product) {
+      if (productId) return res.status(404).json({ message: 'Producto no encontrado' });
       const trimmed = (name || '').trim();
       if (!trimmed) return res.status(400).json({ message: 'Poné el nombre del producto' });
-      const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const existing = await ManualItem.findOne({ name: new RegExp(`^${escaped}$`, 'i') });
-      target = { doc: existing || new ManualItem({ name: trimmed }), isStore: false };
+      // Si ya existe uno con el mismo nombre se suma a ese, para no crear repetidos
+      product = (await Product.findOne({ name: new RegExp(`^${escapeRegex(trimmed)}$`, 'i') }))
+        || new Product({ name: trimmed, active: false });
     }
 
-    const { doc } = target;
-    const cost = unitCost !== undefined && unitCost !== '' ? Number(unitCost) : doc.costPrice;
+    const cost = unitCost !== undefined && unitCost !== '' ? Number(unitCost) : product.costPrice;
     if (Number.isNaN(cost) || cost < 0) return res.status(400).json({ message: 'Costo inválido' });
 
-    doc.stock += qty;
-    doc.costPrice = cost;
-    if (price !== undefined && price !== '') doc.price = Number(price);
-    if (target.isStore) doc.active = true;
-    await doc.save();
+    product.stock += qty;
+    product.costPrice = cost;
+    if (price !== undefined && price !== '') product.price = Number(price);
+    await product.save();
 
     const transaction = await Transaction.create({
       type: 'compra',
-      ...transactionRef(target),
-      productName: doc.name,
+      product: product._id,
+      productName: product.name,
       quantity: qty,
       unitPrice: cost,
       total: qty * cost,
       manual: true,
     });
 
-    res.status(201).json({ item: doc, transaction });
+    res.status(201).json({ item: product, transaction });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ message: errorMessage(err) });
   }
 });
 
 // POST /api/transactions/sale — solo admin: registrar una venta hecha por fuera de la página
 router.post('/sale', auth, async (req, res) => {
   try {
-    const { productId, manualItemId, quantity, unitPrice, channel } = req.body;
+    const { productId, quantity, unitPrice, channel } = req.body;
     const qty = Number(quantity);
     if (!qty || qty <= 0) return res.status(400).json({ message: 'Cantidad inválida' });
     if (!MANUAL_CHANNELS.includes(channel))
       return res.status(400).json({ message: 'Elegí por dónde vino la venta' });
 
-    const target = await findTarget({ productId, manualItemId });
-    if (!target) return res.status(404).json({ message: 'Producto no encontrado' });
+    const product = productId ? await Product.findById(productId) : null;
+    if (!product) return res.status(404).json({ message: 'Producto no encontrado' });
 
-    const { doc } = target;
-    if (qty > doc.stock) {
-      return res.status(400).json({ message: `No hay stock suficiente de "${doc.name}" (quedan ${doc.stock})` });
+    if (qty > product.stock) {
+      return res.status(400).json({ message: `No hay stock suficiente de "${product.name}" (quedan ${product.stock})` });
     }
 
-    const price = unitPrice !== undefined && unitPrice !== '' ? Number(unitPrice) : doc.price;
+    const price = unitPrice !== undefined && unitPrice !== '' ? Number(unitPrice) : product.price;
     if (Number.isNaN(price) || price < 0) return res.status(400).json({ message: 'Precio inválido' });
 
-    doc.stock -= qty;
-    await doc.save();
+    product.stock -= qty;
+    await product.save();
 
     const transaction = await Transaction.create({
       type: 'venta',
-      ...transactionRef(target),
-      productName: doc.name,
+      product: product._id,
+      productName: product.name,
       quantity: qty,
       unitPrice: price,
-      unitCost: doc.costPrice,
+      unitCost: product.costPrice,
       total: qty * price,
       manual: true,
       channel,
     });
 
-    res.status(201).json({ item: doc, transaction });
+    res.status(201).json({ item: product, transaction });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ message: errorMessage(err) });
   }
 });
 
@@ -176,19 +125,14 @@ router.delete('/:id', auth, async (req, res) => {
     if (transaction.encargo)
       return res.status(400).json({ message: 'Esta venta es de un encargo: cambiá el estado del encargo desde la pestaña Encargos' });
 
-    // Puede ser un producto de la tienda o uno cargado a mano desde Finanzas
-    const item = transaction.product
-      ? await Product.findById(transaction.product)
-      : transaction.manualItem
-        ? await ManualItem.findById(transaction.manualItem)
-        : null;
-    if (item) {
+    const product = transaction.product ? await Product.findById(transaction.product) : null;
+    if (product) {
       if (transaction.type === 'compra') {
-        item.stock = Math.max(0, item.stock - transaction.quantity);
+        product.stock = Math.max(0, product.stock - transaction.quantity);
       } else {
-        item.stock += transaction.quantity;
+        product.stock += transaction.quantity;
       }
-      await item.save();
+      await product.save();
     }
 
     await transaction.deleteOne();

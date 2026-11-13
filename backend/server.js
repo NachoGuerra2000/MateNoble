@@ -30,7 +30,11 @@ const ensureAdminUser = async () => {
   }
 };
 
-connectDB().then(ensureAdminUser);
+const migrateManualItems = require('./lib/migrateManualItems');
+
+connectDB()
+  .then(ensureAdminUser)
+  .then(() => migrateManualItems().catch((err) => console.error('Error al unificar productos de Finanzas:', err.message)));
 
 app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:3000' }));
 app.use(express.json());
