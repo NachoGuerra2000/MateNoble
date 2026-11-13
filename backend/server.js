@@ -47,7 +47,10 @@ app.use('/api/transactions', require('./routes/transactions'));
 app.use('/api/encargos', require('./routes/encargos'));
 app.use('/api/export', require('./routes/export'));
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+// Incluye la versión publicada (Render pone el commit en RENDER_GIT_COMMIT) para saber si se actualizó
+app.get('/api/health', (req, res) =>
+  res.json({ status: 'ok', version: (process.env.RENDER_GIT_COMMIT || 'local').slice(0, 7) })
+);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));

@@ -406,12 +406,14 @@ export default function AdminDashboard() {
     const images = form.images.length ? form.images : (form.image ? [form.image] : []);
     const payload = { ...form, price: Number(form.price), costPrice: Number(form.costPrice), wholesalePrice: Number(form.wholesalePrice) || 0, stock: Number(form.stock), images, image: images[0] || form.image };
     try {
-      if (editingProduct) {
-        await productsAPI.update(editingProduct._id, payload, token);
-        toast.success('Producto actualizado');
+      const saved = editingProduct
+        ? await productsAPI.update(editingProduct._id, payload, token)
+        : await productsAPI.create(payload, token);
+      // Si el servidor está desactualizado, algunos campos nuevos no se guardan: mejor avisar
+      if ((saved.wholesalePrice || 0) !== payload.wholesalePrice || (saved.madeToOrder ?? payload.madeToOrder) !== payload.madeToOrder) {
+        toast.error('Se guardó, pero el servidor no guardó el precio para empresas o "por encargo". Puede que el servidor (Render) no esté actualizado.', { duration: 8000 });
       } else {
-        await productsAPI.create(payload, token);
-        toast.success('Producto creado');
+        toast.success(editingProduct ? 'Producto actualizado' : 'Producto creado');
       }
       setModalOpen(false);
       loadProducts();

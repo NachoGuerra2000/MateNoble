@@ -299,19 +299,28 @@ export default function CatalogoTab({ token, onAuthError, onProductsChanged }) {
     () => [...products].sort((a, b) => (CATEGORY_ORDER[a.category] ?? 99) - (CATEGORY_ORDER[b.category] ?? 99) || a.name.localeCompare(b.name)),
     [products]
   );
-  const isIncluded = (p) => choices[p._id] ?? p.wholesalePrice > 0;
+  // Precio para empresas tal como está escrito en la lista (aunque todavía no se haya guardado)
+  const typedWholesale = (p) => (prices[p._id] !== undefined ? Number(prices[p._id]) || 0 : p.wholesalePrice || 0);
+  const isIncluded = (p) => choices[p._id] ?? typedWholesale(p) > 0;
   const included = sorted.filter(isIncluded);
 
+  // Guarda el precio para empresas; devuelve false si no se pudo
   const savePrice = async (p) => {
-    const value = Number(prices[p._id]) || 0;
-    if (value === (p.wholesalePrice || 0)) return;
+    const value = typedWholesale(p);
+    if (value === (p.wholesalePrice || 0)) return true;
     setSavingId(p._id);
     try {
       const updated = await productsAPI.update(p._id, { wholesalePrice: value }, token);
+      if ((updated.wholesalePrice || 0) !== value) {
+        toast.error('El servidor no guardó el precio para empresas. Puede que el servidor (Render) no esté actualizado.', { duration: 8000 });
+        return false;
+      }
       setProducts((list) => list.map((x) => (x._id === p._id ? updated : x)));
       onProductsChanged?.();
+      return true;
     } catch (err) {
       if (!onAuthError(err)) toast.error(err.message || 'Error al guardar el precio');
+      return false;
     } finally {
       setSavingId(null);
     }
@@ -323,7 +332,10 @@ export default function CatalogoTab({ token, onAuthError, onProductsChanged }) {
     }
     setGenerating(true);
     try {
-      const doc = await buildPdf(included, config);
+      // Primero se guardan los precios que se escribieron y todavía no se guardaron
+      await Promise.all(included.filter((p) => typedWholesale(p) !== (p.wholesalePrice || 0)).map(savePrice));
+      // El PDF usa siempre el precio que se ve escrito en la lista
+      const doc = await buildPdf(included.map((p) => ({ ...p, wholesalePrice: typedWholesale(p) })), config);
       const fileName = `catalogo-empresas-mate-noble-${new Date().toISOString().slice(0, 10)}.pdf`;
       if (share) {
         const file = new File([doc.output('blob')], fileName, { type: 'application/pdf' });
